@@ -514,7 +514,6 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
       <button class="btn btn-outline" style="flex:none;width:44px;padding:10px" onclick="copyProductLink()" title="نسخ الرابط"><i class="fas fa-link"></i></button>
       <button class="btn btn-outline" style="flex:1" onclick="closeDetail()">رجوع</button>
       <button class="btn btn-primary" style="flex:2" onclick="addFromDetail()"><i class="fas fa-cart-plus"></i> أضف للسلة</button>
-      <button class="btn btn-accent" style="flex:1;background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer" onclick="buyNow()"><i class="fas fa-bolt"></i> شراء</button>
     </div>
 </div>
 
@@ -2906,18 +2905,6 @@ function openImageZoom(src) {
 function closeImageZoom() {
   document.getElementById('img-zoom-overlay').style.display = 'none';
 }
-function buyNow() {
-  if (!detailProduct) return;
-  var qty = detailQtyVal || 1;
-  var stock = detailProduct.stock;
-  if (stock != null && qty > stock) { toast(t('stock_unavailable_qty') + stock + ')', 'error'); return; }
-  cart = [{ product: { id: detailProduct.id, name: detailProduct.name, price: detailProduct.price, unit: detailProduct.unit }, quantity: qty }];
-  saveCart();
-  updateCartBadge();
-  closeDetail();
-  openCheckout();
-}
-
 // ============ PROFILE ============
 function updateProfileUI() {
   if (!user) return;
