@@ -83,7 +83,7 @@ app.use(helmet({
       imgSrc: ["'self'", 'data:', 'https:'],
       fontSrc: ["'self'", 'https:', 'data:'],
       connectSrc: ["'self'", 'https:', 'wss:'],
-      frameSrc: ["'self'"],
+      frameSrc: ["'self'", 'https://maps.google.com', 'https://www.google.com'],
       objectSrc: ["'none'"]
     }
   }
