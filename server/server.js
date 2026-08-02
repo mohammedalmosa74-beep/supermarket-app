@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 require('dotenv').config();
 const cors = require('cors');
 const helmet = require('helmet');
@@ -99,6 +99,54 @@ app.use(globalLimiter);
 // DB setup (Supabase)
 const db = require('./supabase/db');
 
+// ============ WEB PUSH NOTIFICATIONS ============
+let webpush = null;
+try {
+  webpush = require('web-push');
+  const vapidPublic = process.env.VAPID_PUBLIC_KEY || 'BIUGaCbtDWjTe30uWuChoB85jPPcbxpipQzf3YbSCeSdP8-X9Iq6TUAlJd2KlhkgCUT2r9zVa9rLkmX6ahOisog';
+  const vapidPrivate = process.env.VAPID_PRIVATE_KEY || 'I6gXa0oHWYf9i4jxA0BqVaIuskdD_dFbEoCzN1J1qk0';
+  webpush.setVapidDetails('mailto:admin@supermarket.app', vapidPublic, vapidPrivate);
+} catch (e) { console.log('web-push not available:', e.message); }
+
+function sendPushToUser(userId, title, body, url) {
+  if (!webpush) return;
+  const subs = (db.get('pushSubs') || db.get('push_subs') || []).value();
+  if (!subs || !subs.length) return;
+  const payload = JSON.stringify({ title, body, url: url || '/' });
+  subs.filter(function(s) { return s.userId === userId; }).forEach(function(s) {
+    webpush.sendNotification(s.subscription, payload).catch(function(err) {
+      if (err && (err.statusCode === 404 || err.statusCode === 410)) {
+        db.get('pushSubs').remove({ userId: userId, subscription: s.subscription }).write();
+      }
+    });
+  });
+}
+
+app.get('/api/push/vapid-public-key', (req, res) => {
+  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || 'BIUGaCbtDWjTe30uWuChoB85jPPcbxpipQzf3YbSCeSdP8-X9Iq6TUAlJd2KlhkgCUT2r9zVa9rLkmX6ahOisog' });
+});
+
+app.post('/api/push/subscribe', auth, (req, res) => {
+  try {
+    const sub = req.body.subscription;
+    if (!sub || !sub.endpoint) return res.status(400).json({ error: 'Invalid subscription' });
+    const key = JSON.stringify(sub);
+    const list = db.get('pushSubs').value();
+    if (!list) db.set('pushSubs', []).write();
+    const existing = db.get('pushSubs').find(function(s) { return JSON.stringify(s.subscription) === key && s.userId === req.user.id; }).value();
+    if (!existing) db.get('pushSubs').push({ userId: req.user.id, subscription: sub, createdAt: new Date().toISOString() }).write();
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/push/subscribe', auth, (req, res) => {
+  try {
+    db.get('pushSubs').remove(function(s) { return s.userId === req.user.id; }).write();
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// ============ END WEB PUSH ============
+
 const defaultProducts = [
   { id: 1, name: 'طماطم', sub: 'خضار', cat: '1', price: 3000, unit: 'كغ', image: '', badge: '', discount: 0, stock: 100, active: true, preorder: false },
   { id: 2, name: 'خيار', sub: 'خضار', cat: '1', price: 2000, unit: 'كغ', image: '', badge: '', discount: 0, stock: 100, active: true, preorder: false },
@@ -184,19 +232,20 @@ function adminAuth(req, res, next) {
 
 // ============ AUTH ============
 app.post('/api/auth/register', authLimiter, validate([
-  { name: 'phone', in: 'body', required: true, type: 'string', minLength: 7, maxLength: 15, message: 'رقم الهاتف مطلوب (7-15 رقم)' }
+  { name: 'phone', in: 'body', required: true, type: 'string', minLength: 7, maxLength: 15, message: 'رقم الهاتف مطلوب (7-15 رقم)' },
+  { name: 'password', in: 'body', required: true, type: 'string', minLength: 4, maxLength: 30, message: 'كلمة السر مطلوبة (4-30 حرف)' }
 ]), async (req, res) => {
   try {
-    const { phone, name } = req.body;
+    const { phone, name, password } = req.body;
     if (!/^\d+$/.test(phone)) return res.status(400).json({ error: 'رقم الهاتف يجب أن يحتوي أرقام فقط' });
     if (name && typeof name === 'string' && name.length > 100) return res.status(400).json({ error: 'الاسم طويل جداً' });
     const safeName = name ? sanitize(name) : 'مستخدم';
     const existing = db.get('users').find({ phone }).value();
     if (existing) {
-      const token = jwt.sign({ id: existing.id, phone: existing.phone }, JWT_SECRET, { expiresIn: '30d' });
-      return res.json({ token, user: { id: existing.id, phone: existing.phone, name: existing.name, dob: existing.dob, city: existing.city, points: existing.points || 0 } });
+      return res.status(409).json({ error: 'هذا الرقم مسجل بالفعل، سجل دخولك بكلمة السر الخاصة بك' });
     }
-    const user = { id: Date.now().toString(36), phone, name: safeName, dob: '', city: '', address: '', points: 0, profile: {}, createdAt: new Date().toISOString() };
+    const pwHash = bcrypt.hashSync(password, 10);
+    const user = { id: Date.now().toString(36), phone, passwordHash: pwHash, name: safeName, dob: '', city: '', address: '', points: 0, profile: {}, createdAt: new Date().toISOString() };
     db.get('users').push(user).write();
     // Generate referral code for new user
     var refCode = (safeName || 'user').substring(0, 3).toUpperCase() + user.id.slice(-4);
@@ -209,12 +258,15 @@ app.post('/api/auth/register', authLimiter, validate([
 });
 
 app.post('/api/auth/login', authLimiter, validate([
-  { name: 'phone', in: 'body', required: true, type: 'string', minLength: 7, maxLength: 15, message: 'رقم الهاتف مطلوب' }
+  { name: 'phone', in: 'body', required: true, type: 'string', minLength: 7, maxLength: 15, message: 'رقم الهاتف مطلوب' },
+  { name: 'password', in: 'body', required: true, type: 'string', minLength: 1, message: 'كلمة السر مطلوبة' }
 ]), async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { phone, password } = req.body;
     const user = db.get('users').find({ phone }).value();
     if (!user) return res.status(404).json({ error: 'هذا الرقم غير مسجل، يرجى إنشاء حساب جديد' });
+    if (!user.passwordHash) return res.status(401).json({ error: 'هذا الحساب لا يملك كلمة سر، سجل حساباً جديداً برقم مختلف' });
+    if (!bcrypt.compareSync(password, user.passwordHash)) return res.status(401).json({ error: 'كلمة السر غير صحيحة' });
     const token = jwt.sign({ id: user.id, phone: user.phone }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, user: { id: user.id, phone: user.phone, name: user.name, dob: user.dob, city: user.city, points: user.points || 0 } });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -300,7 +352,7 @@ app.post('/api/orders/:id/delivery', adminAuth, validate([
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
   db.get('orders').find({ id: req.params.id }).assign({ deliveryPerson: req.body.name, deliveryPersonPhone: req.body.phone || '', deliveryAssignedAt: Date.now() }).write();
   io.to('user:' + order.userId).emit('delivery-assigned', { orderId: order.id, name: req.body.name, phone: req.body.phone || '' });
-  io.to('user:' + order.userId).emit('order-status', { id: order.id, status: order.status, timeline: order.timeline });
+  io.to('user:' + order.userId).emit('order-status', { id: order.id, status: order.status, timeline: order.timeline });\n  if (order.userId) sendPushToUser(order.userId, 'تحديث طلبك', 'حالة طلبك #' + order.id + ' أصبحت: ' + (order.status === 'pending' ? 'قيد الانتظار' : order.status === 'confirmed' ? 'مؤكد' : order.status === 'preparing' ? 'قيد التحضير' : order.status === 'delivering' ? 'قيد التوصيل' : order.status === 'delivered' ? 'تم التوصيل' : 'ملغي'), '/customer.html?v=8');
   // Notify the delivery person
   var dp = db.get('deliveryPersons').find({ name: req.body.name }).value();
   if (dp) {
@@ -607,7 +659,7 @@ app.put('/api/orders/:id/status', adminAuth, (req, res) => {
   if (status === 'delivered') { updates.eta = null; if (order.value().total) addPoints(order.value().userId, order.value().total); }
   order.assign(updates).write();
   io.to('admin').emit('order-status', { id: req.params.id, status, timeline: updates.timeline });
-  io.to('user:' + order.value().userId).emit('order-status', { id: req.params.id, status, timeline: updates.timeline });
+  io.to('user:' + order.value().userId).emit('order-status', { id: req.params.id, status, timeline: updates.timeline });\n  if (order.value().userId) sendPushToUser(order.value().userId, 'تحديث طلبك', 'حالة طلبك #' + req.params.id + ' أصبحت: ' + (status === 'pending' ? 'قيد الانتظار' : status === 'confirmed' ? 'مؤكد' : status === 'preparing' ? 'قيد التحضير' : status === 'delivering' ? 'قيد التوصيل' : status === 'delivered' ? 'تم التوصيل' : 'ملغي'), '/customer.html?v=8');
   db.get('adminLog').push({ action: 'status', detail: `طلب ${req.params.id}: ${status}`, time: Date.now() }).write();
   res.json({ success: true });
 });
