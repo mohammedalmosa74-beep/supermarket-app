@@ -1419,7 +1419,7 @@ app.put('/api/delivery/orders/:id/eta', deliveryAuth, (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/', (req, res) => res.redirect('/customer.html'));
+app.get('/', (req, res) => res.redirect('/customer.html?v=8'));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('/delivery', (req, res) => res.sendFile(path.join(__dirname, 'public', 'delivery.html')));
 app.use(express.static(path.join(__dirname, 'public')));
