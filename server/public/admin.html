@@ -3274,6 +3274,10 @@ socket.on('order-status', (data) => {
 document.getElementById('login-password').addEventListener('keydown', function(e) { if (e.key === 'Enter') login(); });
 
 checkAuth();
-</script>
+
+// ==== BACK BUTTON ====
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { if (typeof closeModal === 'function') closeModal(); } });
+window.addEventListener('popstate', function() { setTimeout(function() { if (typeof closeModal === 'function') closeModal(); }, 50); });
+history.pushState({ app: true }, '');</script>
 </body>
 </html>
