@@ -1,0 +1,13 @@
+{
+  "name": "سوبر ماركت ألماني",
+  "short_name": "سوبر ماركت",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F9FAFB",
+  "theme_color": "#16A34A",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/uploads/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/uploads/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
