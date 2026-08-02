@@ -3678,6 +3678,45 @@ socket.on('ticket-reply', function(t) {
     if (typeof toast === 'function') toast('📩 رد على تذكرتك: ' + t.subject, 'info');
   }
 });
-</script>
+
+// ==== BACK BUTTON (closes overlays first, never exits app directly) ====
+var backStack = [];
+var overlayIds = ['prod-detail','order-detail','checkout-view','search-view','tickets-view','ticket-new-view','ticket-detail-view','points-history-view','recurring-view'];
+var backTime = 0;
+function handleBack() {
+  var openOverlay = null;
+  for (var i = 0; i < overlayIds.length; i++) {
+    var el = document.getElementById(overlayIds[i]);
+    if (el && el.classList.contains('show')) { openOverlay = el; break; }
+  }
+  if (openOverlay) {
+    if (openOverlay.id === 'prod-detail') { if (typeof closeDetail === 'function') closeDetail(); }
+    else if (openOverlay.id === 'order-detail') { if (typeof closeOrderDetail === 'function') closeOrderDetail(); }
+    else if (openOverlay.id === 'checkout-view') { if (typeof closeCheckout === 'function') closeCheckout(); }
+    else if (openOverlay.id === 'search-view') { if (typeof closeSearch === 'function') closeSearch(); }
+    else if (openOverlay.id === 'tickets-view') { if (typeof closeTickets === 'function') closeTickets(); }
+    else if (openOverlay.id === 'ticket-new-view') { if (typeof closeNewTicket === 'function') closeNewTicket(); }
+    else if (openOverlay.id === 'ticket-detail-view') { if (typeof closeTicketDetail === 'function') closeTicketDetail(); }
+    else if (openOverlay.id === 'points-history-view') { if (typeof closePointsHistory === 'function') closePointsHistory(); }
+    else if (openOverlay.id === 'recurring-view') { if (typeof closeRecurring === 'function') closeRecurring(); }
+    else openOverlay.classList.remove('show');
+    return;
+  }
+  var appEl = document.getElementById('app');
+  if (appEl && appEl.classList.contains('show')) {
+    if (typeof switchTab === 'function') switchTab('home');
+    return;
+  }
+  var authEl = document.getElementById('auth-view');
+  if (authEl && !authEl.classList.contains('show')) showAuth();
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') handleBack();
+});
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', function() { setTimeout(handleBack, 50); });
+  history.pushState({ app: true }, '');
+  window.addEventListener('load', function() { if (history.state && history.state.app) {} });
+}</script>
 </body>
 </html>
