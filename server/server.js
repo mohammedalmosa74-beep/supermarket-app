@@ -588,7 +588,7 @@ app.post('/api/orders', auth, orderLimiter, validate([
   { name: 'address', in: 'body', required: true, type: 'string', minLength: 3, maxLength: 500, message: 'عنوان التوصيل مطلوب' },
   { name: 'items', in: 'body', required: true, message: 'الطلب يجب أن يحتوي منتجات' }
 ]), (req, res) => {
-  const { items, address, lat, lng, payment, txnId, orderNote, deliverySlot, contactPhone, total, deliveryFee, discount, couponCode, deliveryDate, giftMessage } = req.body;
+  const { items, address, floor, lat, lng, payment, txnId, orderNote, deliverySlot, contactPhone, total, deliveryFee, discount, couponCode, deliveryDate, giftMessage } = req.body;
   if (!items || !items.length) return res.status(400).json({ error: 'الطلب يجب أن يحتوي منتجات' });
   const user = db.get('users').find({ id: req.user.id }).value();
   // Row-level security: order.userId = req.user.id (enforced below)
@@ -618,6 +618,7 @@ app.post('/api/orders', auth, orderLimiter, validate([
     payment: payment || 'cash',
     txnId: txnId || '',
     address: address || '',
+    floor: floor || '',
     lat: lat || null,
     lng: lng || null,
     phone: user?.phone || '',
