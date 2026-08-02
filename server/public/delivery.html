@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#16A34A">
+<link rel="manifest" href="/manifest.json">
+<title>المندوب - سوبر ماركت</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{--bg:#F3F4F6;--card:#fff;--text:#1F2937;--text2:#6B7280;--border:#E5E7EB;--shadow:0 1px 3px rgba(0,0,0,.08);--primary:#16A34A;--primary-dark:#15803D;--primary-light:#DCFCE7;--success:#22C55E;--warning:#F59E0B;--danger:#EF4444;--info:#3B82F6;--purple:#8B5CF6;--pink:#EC4899;--nav-bg:#fff;--input-bg:#fff;--overlay:rgba(0,0,0,.5)}
+[data-theme=dark]{--bg:#0F172A;--card:#1E293B;--text:#F1F5F9;--text2:#94A3B8;--border:#334155;--shadow:0 1px 3px rgba(0,0,0,.3);--primary-light:#052E16;--nav-bg:#1E293B;--input-bg:#334155;--overlay:rgba(0,0,0,.7)}
+*{margin:0;padding:0;box-sizing:border-box;outline:none}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;direction:rtl;transition:background .3s,color .3s}
+/* Login */
+#login{position:fixed;inset:0;background:linear-gradient(135deg,#16A34A,#15803D);z-index:9999;display:flex;align-items:center;justify-content:center}
+#login .bx{background:var(--card);border-radius:24px;padding:36px 28px;width:90%;max-width:360px;box-shadow:0 24px 80px rgba(0,0,0,.25);text-align:center}
+#login .bx .lg{width:80px;height:80px;background:var(--primary);border-radius:50%;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;font-size:34px;color:#fff}
+#login .bx h2{font-size:20px;color:var(--text)}
+#login .bx p{font-size:13px;color:var(--text2);margin-bottom:24px}
+#login .bx input{width:100%;padding:14px;border:2px solid var(--border);border-radius:12px;font-size:14px;margin-bottom:12px;background:var(--input-bg);color:var(--text)}
+#login .bx input:focus{border-color:var(--primary)}
+#login .bx button{width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer}
+#login .bx button:disabled{opacity:.6}
+#login .bx .er{color:var(--danger);font-size:13px;margin-top:8px;display:none}
+/* Header */
+.hdr{background:var(--primary);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(22,163,74,.3)}
+.hdr h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.hdr .hl{display:flex;align-items:center;gap:8px}
+.hdr .hl button{background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:13px}
+.hdr .hl .nm{font-size:12px;opacity:.9}
+/* Stats */
+.st{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 10px 0}
+.st .c{background:var(--card);border-radius:10px;padding:8px 4px;text-align:center;box-shadow:var(--shadow)}
+.st .c .n{font-size:18px;font-weight:800}
+.st .c .l{font-size:9px;color:var(--text2);margin-top:1px}
+.st .c.gr .n{color:var(--success)}.st .c.bl .n{color:var(--info)}.st .c.or .n{color:var(--warning)}.st .c.pk .n{color:var(--pink)}
+/* Search */
+.srch{display:flex;gap:6px;margin:8px 10px 4px}
+.srch input{flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--input-bg);color:var(--text)}
+.srch button{padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px;cursor:pointer;color:var(--text2);font-size:14px}
+/* Tabs */
+.tb{display:flex;gap:6px;margin:6px 10px}
+.tb button{flex:1;padding:9px;font-size:12px;font-weight:600;cursor:pointer;border:none;border-radius:8px;background:var(--card);color:var(--text2);box-shadow:var(--shadow);transition:all .2s}
+.tb button.act{background:var(--primary);color:#fff}
+/* Orders */
+.or{padding:0 10px}
+.or .o{background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;box-shadow:var(--shadow);cursor:pointer;border-right:4px solid var(--border);transition:transform .12s}
+.or .o:active{transform:scale(.97)}
+.or .o.urg{border-color:var(--danger);background:linear-gradient(135deg,color-mix(in srgb,var(--danger) 8%,var(--card)),var(--card))}
+.or .o.wai{border-color:var(--warning);background:linear-gradient(135deg,color-mix(in srgb,var(--warning) 8%,var(--card)),var(--card))}
+.or .o.act{border-color:var(--info)}.or .o.don{border-color:var(--success)}.or .o.can{border-color:var(--danger);opacity:.5}
+.or .o .oh{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.or .o .oh .id{font-weight:700;font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.or .o .oh .st{font-size:10px;padding:2px 10px;border-radius:10px;font-weight:600}
+.sty.pending{background:#FEF3C7;color:#92400E}.sty.confirmed{background:#DBEAFE;color:#1E40AF}.sty.preparing{background:#EDE9FE;color:#5B21B6}.sty.delivering{background:#DBEAFE;color:#1E40AF}.sty.delivered{background:#D1FAE5;color:#065F46}.sty.cancelled{background:#FEE2E2;color:#991B1B}
+.or .o .ob{font-size:12px;color:var(--text2);margin-bottom:4px}
+.or .o .ob .ln{display:flex;gap:4px;align-items:center;margin-bottom:2px;overflow:hidden}
+.or .o .ob .ln i{width:14px;font-size:10px;flex-shrink:0}
+.or .o .of{display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid var(--border)}
+.or .o .of .pr{font-weight:700;font-size:14px;color:var(--primary)}
+.or .o .of .tm{font-size:10px;color:var(--text2)}
+.or .o .of .ac{display:flex;gap:4px}
+.or .o .of .ac a{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:11px}
+.or .o .of .ac .ac-call{background:color-mix(in srgb,var(--primary) 15%,var(--card));color:var(--primary)}
+.or .o .of .ac .ac-nav{background:color-mix(in srgb,var(--info) 15%,var(--card));color:var(--info)}
+.or .o .badge{font-size:9px;padding:1px 6px;border-radius:6px;font-weight:600}
+.or .o .b-cash{background:#FEF3C7;color:#92400E}
+.or .o .b-card{background:#DBEAFE;color:#1E40AF}
+.or .o .at{font-size:9px;padding:1px 6px;border-radius:6px;margin-right:4px}
+.em{text-align:center;padding:50px 20px;color:var(--text2)}
+.em i{font-size:40px;margin-bottom:10px;opacity:.3}
+.em p{font-size:14px}
+/* Toggle */
+.tg{position:fixed;bottom:80px;right:10px;z-index:99;background:var(--card);border:1px solid var(--border);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow);color:var(--text2);font-size:16px}
+/* Detail */
+#dt{position:fixed;inset:0;z-index:200;display:none;overflow-y:auto}
+#dt .bg{position:fixed;inset:0;background:var(--overlay)}
+#dt .bd{background:var(--card);border-radius:20px 20px 0 0;margin-top:40px;min-height:calc(100vh - 40px);padding:24px 16px 80px;position:relative;animation:up .3s}
+@keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.dc{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:var(--card);width:42px;height:42px;border-radius:50%;border:none;font-size:18px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.2);z-index:201;display:flex;align-items:center;justify-content:center;color:var(--text)}
+.dh{text-align:center;margin-bottom:12px}
+.dh h2{font-size:18px}
+.dh .st{display:inline-block;margin-top:4px;font-size:12px;padding:3px 14px;border-radius:12px;font-weight:600;color:#fff!important}
+.dh .ag{font-size:11px;color:var(--text2);margin-top:4px}
+.ds{background:var(--bg);border-radius:12px;padding:12px;margin-bottom:10px}
+.ds h3{font-size:12px;color:var(--text2);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.dr{display:flex;justify-content:space-between;padding:3px 0;font-size:13px;align-items:flex-start}
+.dr .lb{color:var(--text2);font-size:12px;white-space:nowrap}
+.di{font-size:13px}
+.di .it{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)}
+.di .it:last-child{border-bottom:none}
+.dt .tl{display:flex;justify-content:space-between;padding:6px 0 0;margin-top:4px;border-top:1px solid var(--border);font-weight:700;font-size:14px}
+.dt .tl .tv{color:var(--primary)}
+/* Map */
+.dm{margin-bottom:10px;border-radius:12px;overflow:hidden;height:160px;background:var(--bg);position:relative}
+.dm iframe{width:100%;height:100%;border:none}
+.dm .mp{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text2);font-size:12px;gap:6px}
+.dm .mp i{font-size:28px;opacity:.4}
+/* Timeline */
+.dtl{padding:0;list-style:none;position:relative}
+.dtl li{display:flex;gap:10px;padding:4px 0;position:relative}
+.dtl li .dt{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:5px;position:relative}
+.dtl li .ln2{position:absolute;left:4px;top:16px;bottom:-4px;width:2px;background:var(--border)}
+.dtl li:last-child .ln2{display:none}
+.dtl li .ti{font-size:12px}
+.dtl li .ti .lb2{font-weight:600;font-size:13px}
+.dtl li .ti .tm2{font-size:10px;color:var(--text2)}
+/* Actions */
+.da{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.da button{display:flex;align-items:center;justify-content:center;gap:5px;padding:12px;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:transform .1s}
+.da button:active{transform:scale(.96)}
+.da .call{background:color-mix(in srgb,var(--primary) 15%,var(--card));color:var(--primary)}
+.da .nav{background:color-mix(in srgb,var(--info) 15%,var(--card));color:var(--info)}
+.da .loc{background:color-mix(in srgb,var(--purple) 15%,var(--card));color:var(--purple);grid-column:span 2}
+.da .loc.on{background:var(--purple);color:#fff}
+.da .start{background:#FFF3E0;color:#E65100;grid-column:span 2}
+.da .done{background:var(--primary);color:#fff;grid-column:span 2}
+.da .whats{background:color-mix(in srgb,#25D366 15%,var(--card));color:#25D366;grid-column:span 2}
+/* Code */
+.dc2{margin-top:8px;padding:12px;background:color-mix(in srgb,var(--primary) 8%,var(--card));border:2px dashed var(--primary);border-radius:10px;text-align:center}
+.dc2 label{font-size:12px;color:var(--text2);display:block;margin-bottom:8px}
+.dc2 .ci{display:flex;gap:8px;justify-content:center;direction:ltr}
+.dc2 .ci input{width:44px;height:50px;text-align:center;font-size:24px;font-weight:800;border:2px solid var(--border);border-radius:10px;background:var(--input-bg);color:var(--text);transition:border .2s}
+.dc2 .ci input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(22,163,74,.15)}
+.dca{margin-top:8px}
+.dca label{font-size:12px;color:var(--text2);display:block;margin-bottom:4px}
+.dca input{padding:10px;border:1px solid var(--border);border-radius:10px;font-size:14px;width:100%;text-align:center;background:var(--input-bg);color:var(--text)}
+.dn2{margin-top:8px}
+.dn2 textarea{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:13px;resize:none;height:50px;background:var(--input-bg);color:var(--text)}
+.de{margin-top:8px;display:flex;gap:6px}
+.de input{flex:1;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--input-bg);color:var(--text)}
+.de button{padding:10px 14px;background:var(--info);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600}
+/* Toast */
+#tt{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1F2937;color:#fff;padding:12px 24px;border-radius:10px;font-size:13px;z-index:9998;display:none;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:90%}
+#tt.sh{display:block;animation:fi .3s}
+@keyframes fi{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+/* Auto-refresh indicator */
+.ari{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--text2);background:var(--card);padding:4px 12px;border-radius:10px;box-shadow:var(--shadow);z-index:50;direction:ltr;display:flex;align-items:center;gap:4px}
+.ari .ard{width:6px;height:6px;border-radius:50%;background:var(--success);animation:pl 2s infinite}
+@keyframes pl{50%{opacity:.3}}
+</style>
+</head>
+<body>
+<div id="login"><div class="bx">
+  <div class="lg"><i class="fas fa-motorcycle"></i></div>
+  <h2 id="lh2">تطبيق المندوب</h2>
+  <p id="lp">سوبر ماركت</p>
+  <input type="tel" id="l1" placeholder="رقم الهاتف" dir="ltr">
+  <input type="password" id="l2" placeholder="كلمة السر" dir="ltr">
+  <button id="l3" onclick="lg()">تسجيل الدخول</button>
+  <div class="er" id="l4"></div>
+</div></div>
+
+<div id="app" style="display:none">
+  <div class="hdr">
+    <h1><i class="fas fa-motorcycle"></i> المندوب</h1>
+    <div class="hl"><span class="nm" id="hn"></span><button onclick="lo()" title="خروج"><i class="fas fa-sign-out-alt"></i></button></div>
+  </div>
+  <div class="st">
+    <div class="c or"><div class="n" id="sa">0</div><div class="l">جاري</div></div>
+    <div class="c gr"><div class="n" id="sd">0</div><div class="l">تم</div></div>
+    <div class="c bl"><div class="n" id="st2">0</div><div class="l">اليوم</div></div>
+    <div class="c pk"><div class="n" id="sc">0</div><div class="l">محصل</div></div>
+  </div>
+  <div class="srch"><input type="text" id="sq" placeholder="🔍 بحث برقم الطلب أو اسم العميل..." oninput="rd()"><button onclick="ld()" title="تحديث"><i class="fas fa-sync-alt"></i></button></div>
+  <div class="tb"><button class="act" onclick="sw('act',this)"><i class="fas fa-list"></i> الحالية <span id="bc" style="background:var(--danger);color:#fff;border-radius:10px;padding:0 6px;font-size:10px;display:none"></span></button><button onclick="sw('his',this)"><i class="fas fa-history"></i> السجل</button><button onclick="showRoute()" title="عرض المسار" style="padding:9px;font-size:12px;font-weight:600;cursor:pointer;border:none;border-radius:8px;background:var(--card);color:var(--text2);box-shadow:var(--shadow);flex:0 0 auto"><i class="fas fa-route"></i></button></div>
+  <div id="ta" class="or"></div><div id="th" class="or" style="display:none"></div>
+</div>
+<button class="tg" onclick="td()" title="الوضع الليلي" id="dmbtn"><i class="fas fa-moon"></i></button>
+<div class="ari"><div class="ard"></div><span id="art"></span></div>
+
+<div id="dt"><button class="dc" onclick="cd()"><i class="fas fa-times"></i></button><div class="bg" onclick="cd()"></div><div class="bd" id="db"></div></div>
+<div id="tt"></div>
+
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<script>
+// ==== CONFIG ====
+var TK='alm_del_tok',tok=localStorage.getItem(TK),me=null,ords=[],sk=null,wi=null,sl=false,coi=null,ari=null,art=0;
+// ==== UTILS ====
+function t(m,p){var e=document.getElementById('tt');e.textContent=m;e.style.display='block';e.style.background=p==='e'?'#DC2626':p==='o'?'#16A34A':'#1F2937';e.classList.add('sh');setTimeout(function(){e.classList.remove('sh');e.style.display='none';},3000);}
+function api(m,u,b){var o={method:m,headers:{}};if(b){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b);}var t2=localStorage.getItem(TK);if(t2)o.headers['Authorization']='Bearer '+t2;return fetch(u,o).then(function(r){return r.json().then(function(d){if(!r.ok){var e=new Error(d.error||'خطأ');e.status=r.status;throw e;}return d;});});}
+function bp(){try{var c=new(window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=800;g.gain.value=0.3;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.3);}catch(e){}}
+function pn(t,b){if(Notification.permission==='granted')try{new Notification(t,{body:b,icon:'/uploads/icon-192.png'});}catch(e){}}
+function sa(d){if(!d)return'';var df=Date.now()-new Date(d).getTime(),m=Math.floor(df/60000);if(m<1)return'الآن';if(m<60)return'قبل '+m+' د';var h=Math.floor(m/60);m=m%60;return'قبل '+h+' س '+m+' د';}
+function ga(d){if(!d)return'';var df=Date.now()-new Date(d).getTime(),m=Math.floor(df/60000);if(m<30)return'<span class="at" style="background:#D1FAE5;color:#065F46">جديد</span>';if(m<60)return'<span class="at" style="background:#FEF3C7;color:#92400E">'+m+' د</span>';return'<span class="at" style="background:#FEE2E2;color:#991B1B">'+Math.floor(m/60)+' س</span>';}
+var lb={pending:'قيد الانتظار',confirmed:'مؤكد',preparing:'قيد التحضير',delivering:'قيد التوصيل',delivered:'تم التوصيل',cancelled:'ملغي'};
+// ==== LOGIN ====
+function lg(){var p=document.getElementById('l1').value.trim(),w=document.getElementById('l2').value.trim();if(!p||!w){var e=document.getElementById('l4');e.textContent='أدخل رقم الهاتف وكلمة السر';e.style.display='block';return;}var b=document.getElementById('l3');b.disabled=true;b.textContent='...';fetch('/api/delivery/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:p,password:w})}).then(function(r){return r.json().then(function(d){if(!r.ok){var e2=new Error(d.error);throw e2;}return d;});}).then(function(d){tok=d.token;me=d.person;localStorage.setItem(TK,tok);document.getElementById('l4').style.display='none';b.disabled=false;b.textContent='تسجيل الدخول';sa2();}).catch(function(e2){b.disabled=false;b.textContent='تسجيل الدخول';var e3=document.getElementById('l4');e3.textContent=e2.message;e3.style.display='block';});}
+// ==== APP ====
+function sa2(){document.getElementById('login').style.display='none';document.getElementById('app').style.display='block';document.getElementById('hn').textContent=me?me.name:'';if(Notification&&Notification.permission==='default')Notification.requestPermission();cs();ld();startAR();}
+function lo(){localStorage.removeItem(TK);tok=null;me=null;if(wi){navigator.geolocation.clearWatch(wi);wi=null;}if(sk)sk.disconnect();if(ari)clearInterval(ari);document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('l1').value='';document.getElementById('l2').value='';}
+function cs(){try{if(sk)sk.disconnect();if(typeof io!=='undefined'){sk=io({transports:['websocket','polling']});sk.on('connect',function(){if(me)sk.emit('join-delivery',me.id);});sk.on('delivery-assigned',function(d){bp();pn('🚚 طلب جديد','تم تعيين طلب #'+d.orderId+' لك');t('🚚 طلب جديد #'+d.orderId,'o');ld();});sk.on('my-status',function(){ld();});}}catch(e){console.log('Socket err:',e);}}
+// ==== AUTO REFRESH ====
+var arLock=false;function startAR(){if(ari)clearInterval(ari);art=30;var ae=document.getElementById('art');if(ae)ae.textContent=(LANG==='ar'?'تحديث بعد ':'Refresh in ')+art+'s';ari=setInterval(function(){art--;if(ae)ae.textContent=(LANG==='ar'?'تحديث بعد ':'Refresh in ')+art+'s';if(art<=0&&!arLock){arLock=true;art=30;ld();setTimeout(function(){arLock=false;},5000);}},1000);}
+// ==== ORDERS ====
+var tab='act';
+function sw(t,b){tab=t;document.querySelectorAll('.tb button').forEach(function(x){x.classList.remove('act');});if(b)b.classList.add('act');document.getElementById('ta').style.display=t==='act'?'block':'none';document.getElementById('th').style.display=t==='his'?'block':'none';rd();}
+function ld(){if(!tok)return;var ta=document.getElementById('ta'),th=document.getElementById('th');if(ta&&!ta.children.length)ta.innerHTML='<div class="em"><i class="fas fa-spinner fa-pulse"></i><p>جاري التحميل...</p></div>';api('GET','/api/delivery/orders').then(function(o){ords=o;ust();rd();}).catch(function(e){if(e.status===401||e.status===403)lo();else if(ta)ta.innerHTML='<div class="em"><i class="fas fa-exclamation-circle" style="color:var(--danger)"></i><p>فشل التحميل: '+e.message+'</p></div>';});}
+function ust(){var n=new Date();n.setHours(0,0,0,0);var ts=n.getTime();var a=ords.filter(function(o){return o.status==='delivering';}).length;var d=ords.filter(function(o){return o.status==='delivered';}).length;var t2=ords.filter(function(o){var d2=new Date(o.date).getTime();return d2>=ts;}).length;var c=0;ords.filter(function(o){return o.status==='delivered'&&o.cashCollected;}).forEach(function(o){c+=Number(o.cashCollected)||0;});document.getElementById('sa').textContent=a;document.getElementById('sd').textContent=d;document.getElementById('st2').textContent=t2;document.getElementById('sc').textContent=c?c.toLocaleString('en-US'):'0';var cnt=ords.filter(function(o){return o.status!=='delivered'&&o.status!=='cancelled';}).length;var be=document.getElementById('bc');if(cnt>0){be.textContent=cnt;be.style.display='inline';}else{be.style.display='none';}}
+function rd(){var q=document.getElementById('sq').value.trim().toLowerCase();var isA=tab==='act';var list=ords.filter(function(o){var m=!q||(o.id||'').toLowerCase().includes(q)||(o.customerName||'').toLowerCase().includes(q);return m&&(isA?(o.status!=='delivered'&&o.status!=='cancelled'):(o.status==='delivered'||o.status==='cancelled'));});var el=document.getElementById(isA?'ta':'th');if(!list.length){el.innerHTML='<div class="em"><i class="fas fa-'+(isA?'truck':'check-double')+'"></i><p>'+(isA?'لا يوجد طلبات':'لا يوجد طلبات سابقة')+'</p></div>';return;}el.innerHTML=list.sort(function(a,b){return(b.date||'')>(a.date||'')?1:-1;}).map(function(o){var cnt=(o.items||[]).reduce(function(s,i){return s+(i.quantity||i.qty||1);},0);var now=Date.now(),ageDiff=now-new Date(o.date).getTime(),isOld=ageDiff>3600000,isMed=ageDiff>1800000&&ageDiff<3600000;var cls='o';if(isA&&isOld)cls+=' urg';else if(isA&&isMed)cls+=' wai';else if(o.status==='delivering')cls+=' act';else if(o.status==='delivered')cls+=' don';else if(o.status==='cancelled')cls+=' can';var pi=o.payment==='cash'?'<span class="badge b-cash">نقداً</span>':o.payment==='online'?'<span class="badge b-card">بطاقة</span>':'';var elapsed=sa(o.date);var itemsTotal=(o.items||[]).reduce(function(s,i){return s+((i.price||0)*(i.quantity||i.qty||1));},0);return'<div class="'+cls+'" onclick="sd2(\''+(o.id||o._id)+'\')"><div class="oh"><span class="id">#'+(o.id||o._id)+' '+pi+ga(o.date)+'</span><span class="st sty '+o.status+'">'+(lb[o.status]||o.status)+'</span></div><div class="ob"><div class="ln"><i class="fas fa-user"></i> '+(o.customerName||'')+'</div><div class="ln"><i class="fas fa-box"></i> '+cnt+' قطعة - '+itemsTotal.toLocaleString('en-US')+' ل.س</div>'+(o.deliveryFee?'<div class="ln"><i class="fas fa-truck" style="color:var(--warning)"></i> توصيل: '+Number(o.deliveryFee).toLocaleString('en-US')+' ل.س</div>':'')+(o.address?'<div class="ln"><i class="fas fa-map-marker-alt"></i> '+o.address.substring(0,40)+(o.address.length>40?'...':'')+'</div>':'')+'</div><div class="of"><span class="pr">'+(o.total||0).toLocaleString('en-US')+' ل.س</span><span class="tm"><i class="far fa-clock"></i> '+elapsed+'</span><div class="ac">'+(o.customerPhone?'<a href="tel:'+o.customerPhone+'" class="ac-call" onclick="event.stopPropagation()"><i class="fas fa-phone"></i></a>':'')+(o.address?'<a href="https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(o.address)+'" target="_blank" class="ac-nav" onclick="event.stopPropagation()"><i class="fas fa-map-marker-alt"></i></a>':'')+'</div></div></div>';}).join('');}
+
+// ==== DETAIL ====
+function sd2(id){
+  var o=ords.find(function(x){return(x.id||x._id)===id;});if(!o)return;
+  try {
+    var s=o.status||'',items=o.items||[];
+    var cs=s==='preparing'||s==='confirmed'||s==='pending';
+    var cd2=s==='delivering';
+    var age=sa(o.date),eta=o.eta||'',etaD=eta?new Date(eta):null,remain=etaD?Math.max(0,Math.round((etaD.getTime()-Date.now())/60000)):0;
+
+    // Map: use lat/lng if available, otherwise address
+    var mapUrl='';
+    if(o.lat&&o.lng)mapUrl='https://maps.google.com/maps?q='+o.lat+','+o.lng+'&output=embed';
+    else if(o.address)mapUrl='https://maps.google.com/maps?q='+encodeURIComponent(o.address)+'&output=embed';
+    var navUrl=o.lat&&o.lng?'https://www.google.com/maps/dir/?api=1&destination='+o.lat+','+o.lng:(o.address?'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(o.address):'');
+
+    var h='<div class="dh"><h2>طلب #'+(o.id||o._id)+'</h2><span class="st" style="background:'+({pending:'#F59E0B',confirmed:'#3B82F6',preparing:'#8B5CF6',delivering:'#3B82F6',delivered:'#22C55E',cancelled:'#EF4444'}[s]||'#999')+'">'+(lb[s]||s)+'</span><div class="ag"><i class="far fa-clock"></i> '+age+'</div>'+(etaD?'<div style="font-size:12px;color:var(--info);margin-top:6px;background:color-mix(in srgb,var(--info) 10%,var(--card));padding:6px 12px;border-radius:8px"><i class="fas fa-hourglass-half"></i> متبقي <b>'+remain+'</b> دقيقة</div>':'')+'</div>';
+
+    // Embedded map
+    if(mapUrl){h+='<div class="dm"><iframe src="'+mapUrl+'" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>';}
+    else if(o.address){h+='<div class="dm"><div class="mp"><i class="fas fa-map-marked-alt"></i><span style="text-align:center;padding:0 10px">'+o.address+'</span></div></div>';}
+
+    // Customer info
+    h+='<div class="ds"><h3><i class="fas fa-user-circle"></i> العميل</h3><div class="dr"><span class="lb">الاسم</span><span>'+(o.customerName||'')+'</span></div><div class="dr"><span class="lb">الهاتف</span><span dir="ltr"><a href="tel:'+(o.customerPhone||'')+'" style="color:var(--info)">'+(o.customerPhone||'')+'</a></span></div><div class="dr"><span class="lb">العنوان</span><span style="text-align:left;font-size:12px">'+(o.address||'')+'</span></div>'+(o.deliverySlot?'<div class="dr"><span class="lb">الوقت</span><span>'+o.deliverySlot+'</span></div>':'')+(o.deliveryDate?'<div class="dr"><span class="lb">التاريخ</span><span>'+o.deliveryDate+'</span></div>':'')+(o.orderNote?'<div style="margin-top:6px;padding:8px;background:color-mix(in srgb,var(--warning) 15%,var(--card));border-radius:6px;font-size:12px">📝 '+o.orderNote+'</div>':'')+(o.giftMessage?'<div style="margin-top:6px;padding:8px;background:color-mix(in srgb,var(--pink) 15%,var(--card));border-radius:6px;font-size:12px">🎁 '+o.giftMessage+'</div>':'')+'</div>';
+
+    // Timeline
+    try{var tl=o.timeline||{},tlk=Object.keys(tl).filter(function(k){return tl[k];});if(tlk.length){h+='<div class="ds"><h3><i class="fas fa-clock"></i> الخط الزمني</h3><ul class="dtl">';tlk.forEach(function(k,i){var cl={pending:'#F59E0B',confirmed:'#3B82F6',preparing:'#8B5CF6',delivering:'#3B82F6',delivered:'#22C55E',cancelled:'#EF4444'}[k]||'#999';h+='<li><div class="dt" style="background:'+cl+'"></div>'+(i<tlk.length-1?'<div class="ln2"></div>':'')+'<div class="ti"><div class="lb2" style="color:'+cl+'">'+(lb[k]||k)+'</div><div class="tm2">'+new Date(tl[k]).toLocaleString('ar-SA')+'</div></div></li>';});h+='</ul></div>';}}catch(e){}
+
+    // Items
+    var itemsTotal=items.reduce(function(s,i){return s+((i.price||0)*(i.quantity||i.qty||1));},0);h+='<div class="ds"><h3><i class="fas fa-box"></i> المنتجات ('+items.length+')</h3><div class="di">'+items.map(function(i){return'<div class="it"><span>'+(i.name||'منتج')+' × '+(i.quantity||i.qty||1)+'</span><span>'+((i.price||0)*(i.quantity||i.qty||1)).toLocaleString('en-US')+'</span></div>';}).join('')+'</div><div class="dr"><span class="lb">المجموع</span><span>'+itemsTotal.toLocaleString('en-US')+' ل.س</span></div>'+(typeof o.deliveryFee!=='undefined'&&Number(o.deliveryFee)>0?'<div class="dr"><span class="lb">توصيل</span><span>'+Number(o.deliveryFee).toLocaleString('en-US')+' ل.س</span></div>':'')+'<div class="tl"><span>الإجمالي</span><span class="tv">'+(o.total||0).toLocaleString('en-US')+' ل.س</span></div></div>';
+
+    // Action buttons
+    h+='<div class="da">'+(o.customerPhone?'<button class="call" onclick="window.location.href=\'tel:'+o.customerPhone+'\'"><i class="fas fa-phone"></i> اتصال</button>':'')+(navUrl?'<button class="nav" onclick="window.open(\''+navUrl+'\',\'_blank\')"><i class="fas fa-directions"></i> اتجاهات</button>':'')+'<button class="loc'+(sl?' on':'')+'" onclick="tl2(\''+(o.id||o._id)+'\')"><i class="fas fa-'+(sl?'stop':'satellite-dish')+'"></i> '+(sl?'إيقاف الموقع':'مشاركة موقعي')+'</button>'+(o.customerPhone?'<button class="whats" onclick="window.open(\'https://wa.me/'+o.customerPhone.replace(/^0+/,'')+'\',\'_blank\')"><i class="fab fa-whatsapp"></i> واتساب</button>':'')+'</div>';
+
+    // Status actions
+    if(cs||cd2){
+      h+='<div class="da">';
+      if(cs)h+='<button class="start" onclick="us2(\''+(o.id||o._id)+'\',\'delivering\')"><i class="fas fa-truck"></i> بدء التوصيل</button>';
+      if(cd2){
+        var hc=!!o.deliveryCode;
+        h+='<div class="dc2" style="grid-column:span 2"><label>🔐 كود التأكيد (اطلبه من الزبون)</label><div class="ci">';
+        for(var ci=0;ci<4;ci++)h+='<input type="text" id="i'+ci+'" maxlength="1" oninput="mc('+ci+')" onkeydown="kc('+ci+',event)">';
+        h+='</div></div><div style="grid-column:span 2;font-size:11px;color:var(--text2);text-align:center">اسأل الزبون عن كود التوصيل المكون من 4 أرقام</div>';
+        if(hc)h+='<input type="hidden" id="ec" value="'+o.deliveryCode+'">';
+        h+='<div class="dca" style="grid-column:span 2"><label>'+_('cash_label')+'</label><input type="number" id="ci2" value="'+(o.total||0)+'" step="100"></div>';
+        h+='<div class="dn2" style="grid-column:span 2"><textarea id="dn3" placeholder="'+_('note_placeholder')+'"></textarea></div>';
+        h+='<button class="done" id="db2" onclick="md(\''+(o.id||o._id)+'\')"><i class="fas fa-check-circle"></i> '+_('btn_deliver')+'</button>';
+      }
+      h+='</div>';
+    }
+
+    // ETA
+    if(cs||cd2){
+      var curMins='';
+      if(o.eta){try{var curD=Math.round((Number(o.eta)-Date.now())/60000);if(curD>0)curMins=curD;}catch(e){}}
+      h+='<div class="ds"><h3><i class="fas fa-clock"></i> '+_('eta_section')+'</h3>'+
+        '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">'+
+          '<button class="eta-btn" data-m="15" onclick="setETA(15)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:12px;cursor:pointer;flex:1;min-width:50px">'+_('eta_btn_15')+'</button>'+
+          '<button class="eta-btn" data-m="30" onclick="setETA(30)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:12px;cursor:pointer;flex:1;min-width:50px">'+_('eta_btn_30')+'</button>'+
+          '<button class="eta-btn" data-m="45" onclick="setETA(45)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:12px;cursor:pointer;flex:1;min-width:50px">'+_('eta_btn_45')+'</button>'+
+          '<button class="eta-btn" data-m="60" onclick="setETA(60)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:12px;cursor:pointer;flex:1;min-width:50px">'+_('eta_btn_1h')+'</button>'+
+          '<button class="eta-btn" data-m="90" onclick="setETA(90)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:12px;cursor:pointer;flex:1;min-width:50px">'+_('eta_btn_1_5h')+'</button>'+
+          '<button class="eta-btn" data-m="120" onclick="setETA(120)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:12px;cursor:pointer;flex:1;min-width:50px">'+_('eta_btn_2h')+'</button>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px;align-items:center">'+
+          '<input type="number" id="ei" placeholder="'+_('eta_placeholder')+'" min="1" value="'+curMins+'" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--input-bg);color:var(--text);text-align:center">'+
+          '<span style="font-size:12px;color:var(--text2)">'+_('eta_minutes')+'</span>'+
+          '<button onclick="ue(\''+(o.id||o._id)+'\')" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600"><i class="fas fa-check"></i> '+_('eta_submit')+'</button>'+
+        '</div>'+
+        (curMins?'<div style="margin-top:6px;font-size:11px;color:var(--text2);text-align:center">'+_('eta_current')+'<b>'+curMins+'</b>'+_('eta_from_now')+'</div>':'')+
+      '</div>';
+    }
+
+    // Location sharing status
+    if(sl&&coi===(o.id||o._id))h+='<div style="margin-top:8px;padding:8px;background:color-mix(in srgb,var(--purple) 15%,var(--card));border-radius:8px;font-size:12px;text-align:center;color:var(--purple)"><i class="fas fa-circle" style="color:#22C55E;font-size:8px"></i> '+_('sharing_title')+'</div>';
+
+    document.getElementById('db').innerHTML=h;
+    document.getElementById('dt').style.display='block';
+    document.body.style.overflow='hidden';
+  } catch(e){t(_('detail_error')+e.message,'e');}
+}
+function cd(){document.getElementById('dt').style.display='none';document.body.style.overflow='';}
+
+// ==== CODE INPUT ====
+function mc(i){if(i<3){var n=document.getElementById('i'+(i+1));if(n)n.focus();}}
+function kc(i,e){if(e.key==='Backspace'&&i>0){var p=document.getElementById('i'+(i-1));if(p){p.value='';p.focus();}}}
+
+function us2(id,st){api('PUT','/api/delivery/orders/'+id+'/status',{status:st}).then(function(){t(st==='delivered'?_('delivered_done'):_('sharing_active'),'o');cd();ld();}).catch(function(e){t(e.message,'e');});}
+
+function md(id){
+  var ec=document.getElementById('ec');
+  if(ec){
+    var code='';for(var ci=0;ci<4;ci++){var inp=document.getElementById('i'+ci);if(inp)code+=inp.value;}
+    if(code!==ec.value){t(_('code_wrong'),'e');return;}
+  }
+  var cash=document.getElementById('ci2')?document.getElementById('ci2').value:'';
+  var note=document.getElementById('dn3')?document.getElementById('dn3').value:'';
+  var body={status:'delivered'};
+  if(cash)body.cashCollected=Number(cash);
+  if(note)body.deliveryNote=note;
+  if(ec)body.deliveryCode=document.getElementById('i0').value+document.getElementById('i1').value+document.getElementById('i2').value+document.getElementById('i3').value;
+  api('PUT','/api/delivery/orders/'+id+'/status',body).then(function(){var cashMsg=cash&&Number(cash)?_('cash_collected_str')+Number(cash).toLocaleString('en-US')+_('currency')+')':'';t(_('delivered_done')+cashMsg,'o');cd();ld();}).catch(function(e){t(e.message,'e');});
+}
+
+function setETA(m){var inp=document.getElementById('ei');if(inp)inp.value=m;}
+function ue(id){
+  var v=document.getElementById('ei').value;
+  if(!v||v<1){t(_('eta_empty_error'),'e');return;}
+  var etaTs=Date.now()+Number(v)*60000;
+  api('PUT','/api/delivery/orders/'+id+'/eta',{eta:etaTs}).then(function(){t(_('eta_success')+'<b>'+v+'</b>'+_('eta_saved'),'o');setTimeout(function(){cd();ld();},1500);}).catch(function(e){t(e.message,'e');});
+}
+
+// ==== LOCATION SHARING ====
+function tl2(oid){
+  if(sl){if(wi){navigator.geolocation.clearWatch(wi);wi=null;}sl=false;coi=null;t(_('sharing_stopped'),'');sd2(oid);return;}
+  if(!navigator.geolocation){t(_('sharing_error'),'e');return;}
+  coi=oid;
+  wi=navigator.geolocation.watchPosition(function(pos){
+    var data={lat:pos.coords.latitude,lng:pos.coords.longitude,orderId:coi,name:me?me.name:''};
+    if(sk&&sk.connected)sk.emit('delivery-location',data);
+    if(!sl){sl=true;t(_('sharing_active'),'o');sd2(coi);}
+  },function(err){t(_('sharing_err_msg')+err.message,'e');},{enableHighAccuracy:true,timeout:10000,maximumAge:5000});
+}
+
+// ==== ROUTE MAP ====
+function showRoute(){
+  var active=ords.filter(function(o){return o.status!=='delivered'&&o.status!=='cancelled'&&o.address;});
+  if(!active.length){t(_('route_no_active'),'e');return;}
+  // Build multi-stop route
+  var base='https://www.google.com/maps/dir/';
+  var stops=active.map(function(o){
+    if(o.lat&&o.lng)return o.lat+','+o.lng;
+    if(o.address)return encodeURIComponent(o.address);
+    return '';
+  }).filter(function(s){return s;});
+  window.open(base+stops.join('/'),'_blank');
+  // Also show list
+  var h='<div class="ds"><h3><i class="fas fa-route"></i> '+_('route_title')+' ('+active.length+')</h3><div style="font-size:13px">';
+  active.forEach(function(o,i){
+    var addr=o.address||'';
+    if(o.lat&&o.lng)addr+=' <span style="color:var(--text2)">('+o.lat+','+o.lng+')</span>';
+    h+='<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border)">'+
+      '<span style="background:var(--primary);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+(i+1)+'</span>'+
+      '<div style="flex:1"><div style="font-weight:600">'+(o.customerName||'')+'</div><div style="font-size:11px;color:var(--text2)">#'+(o.id||o._id)+' - '+addr+'</div></div>'+
+      '<a href="https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(addr)+'" target="_blank" style="color:var(--info);font-size:16px"><i class="fas fa-location-arrow"></i></a>'+
+    '</div>';
+  });
+  h+='</div></div>';
+  var dtlBody=document.getElementById('db');
+  dtlBody.innerHTML=h;
+  document.getElementById('dt').style.display='block';
+  document.body.style.overflow='hidden';
+}
+// ==== DARK MODE ====
+function td(){
+  var h=document.documentElement;
+  if(h.getAttribute('data-theme')==='dark'){h.setAttribute('data-theme','light');document.getElementById('dmbtn').innerHTML='<i class="fas fa-moon"></i>';localStorage.setItem('alm_del_theme','light');}
+  else{h.setAttribute('data-theme','dark');document.getElementById('dmbtn').innerHTML='<i class="fas fa-sun"></i>';localStorage.setItem('alm_del_theme','dark');}
+}
+
+// ==== INIT ====
+var savedTheme=localStorage.getItem('alm_del_theme')||'light';
+document.documentElement.setAttribute('data-theme',savedTheme);
+document.getElementById('dmbtn').innerHTML=savedTheme==='dark'?'<i class="fas fa-sun"></i>':'<i class="fas fa-moon"></i>';
+
+if(tok){Promise.race([api('GET','/api/delivery/me'),new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'));},5000);})]).then(function(p){me=p;document.getElementById('hn').textContent=p.name;sa2();}).catch(function(){localStorage.removeItem(TK);});}
+</script>
+</body>
+</html>
