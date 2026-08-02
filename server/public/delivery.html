@@ -368,6 +368,10 @@ document.documentElement.setAttribute('data-theme',savedTheme);
 document.getElementById('dmbtn').innerHTML=savedTheme==='dark'?'<i class="fas fa-sun"></i>':'<i class="fas fa-moon"></i>';
 
 if(tok){Promise.race([api('GET','/api/delivery/me'),new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'));},5000);})]).then(function(p){me=p;document.getElementById('hn').textContent=p.name;sa2();}).catch(function(){localStorage.removeItem(TK);});}
-</script>
+
+// ==== BACK BUTTON ====
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') cd(); });
+window.addEventListener('popstate', function() { setTimeout(function() { cd(); }, 50); });
+history.pushState({ app: true }, '');</script>
 </body>
 </html>
