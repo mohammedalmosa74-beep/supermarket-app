@@ -141,10 +141,11 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
 .ov-header .ov-back{width:36px;height:36px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px}
 .ov-header h2{font-size:17px;font-weight:800;flex:1}
 .ov-body{flex:1;overflow-y:auto;padding:16px}
-#prod-detail .pd-img{width:100%;aspect-ratio:1;background:#f0f4f0;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
-#prod-detail .pd-img .ph-icon{font-size:80px;color:var(--text3)}
+#prod-detail .pd-img{width:100%;height:min(45vh,340px);background:#f0f4f0;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#prod-detail .pd-img .ph-icon{font-size:60px;color:var(--text3)}
 #prod-detail .pd-img img{width:100%;height:100%;object-fit:cover}
-#prod-detail .pd-info{padding:20px;background:var(--card);border-radius:var(--radius-xl) var(--radius-xl) 0 0;margin-top:-20px;position:relative;z-index:2;flex:1;overflow-y:auto}
+#prod-detail .pd-info{padding:20px;background:var(--card);border-radius:var(--radius-xl) var(--radius-xl) 0 0;margin-top:-20px;position:relative;z-index:2;flex:1;overflow-y:auto;padding-bottom:20px}
+#prod-detail .pd-btn-bar{flex-shrink:0;background:var(--card);border-top:1px solid var(--card-border);padding:14px 20px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(0,0,0,.06);display:flex;gap:8px}
 #prod-detail .pd-name{font-size:22px;font-weight:900;margin-bottom:2px}
 #prod-detail .pd-sub{font-size:13px;color:var(--text2);margin-bottom:14px}
 #prod-detail .pd-price{font-size:24px;font-weight:900;color:var(--primary);margin-bottom:16px}
@@ -229,8 +230,10 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
     <div class="auth-title">سوبر ماركت ألماني</div>
     <div class="auth-sub">أهلاً بك! أدخل بياناتك للمتابعة</div>
     <div class="input-box"><span class="prefix">+963</span><input type="tel" id="phone-input" placeholder="رقم الهاتف" maxlength="9" inputmode="numeric"></div>
-    <div class="input-box"><i class="fas fa-user" style="color:var(--text3);font-size:14px"></i><input type="text" id="name-input" placeholder="الاسم (اختياري للتسجيل)"></div>
-    <button class="btn btn-primary" onclick="doAuth()"><i class="fas fa-arrow-left"></i> دخول / تسجيل</button>
+    <div class="input-box"><i class="fas fa-user" style="color:var(--text3);font-size:14px"></i><input type="text" id="name-input" placeholder="الاسم (للتسجيل الجديد فقط)"></div>
+    <div class="input-box"><i class="fas fa-lock" style="color:var(--text3);font-size:14px"></i><input type="password" id="pass-input" placeholder="كلمة السر" maxlength="30"></div>
+    <button class="btn btn-primary" onclick="doAuth()"><i class="fas fa-arrow-left"></i> <span id="auth-btn-label">دخول</span></button>
+    <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--text2)"><span id="auth-switch-text">ليس لديك حساب؟</span> <a href="javascript:void(0)" id="auth-switch-link" style="color:var(--primary);font-weight:700" onclick="toggleAuthMode()">تسجيل جديد</a></div>
   </div>
 </div>
 
@@ -311,8 +314,8 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
       <div class="section-head" style="margin-top:4px"><h2>جميع الأقسام</h2></div>
       <div class="cat-scroll" id="all-cats"></div>
       <div style="margin:10px 0;display:flex;gap:6px">
-        <input type="text" id="prod-search-input" placeholder="🔍 ابحث عن منتج..." oninput="filterProducts()" style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:24px;font-size:14px;background:var(--card)">
-        <input type="text" id="barcode-input" placeholder="🏷️ باركود" oninput="searchBarcode()" style="width:80px;padding:10px;border:1px solid var(--border);border-radius:24px;font-size:13px;background:var(--card);text-align:center;direction:ltr">
+        <input type="text" id="prod-search-input" placeholder="🔍 ابحث عن منتج..." oninput="debouncedFilter()" style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:24px;font-size:14px;background:var(--card)">
+        <input type="text" id="barcode-input" placeholder="🏷️ باركود" oninput="debouncedBarcode()" style="width:80px;padding:10px;border:1px solid var(--border);border-radius:24px;font-size:13px;background:var(--card);text-align:center;direction:ltr">
         <select id="prod-cat-filter" onchange="filterProducts()" style="padding:8px 12px;border:1px solid var(--border);border-radius:24px;font-size:13px;background:var(--card)">
           <option value="">كل الأقسام</option>
         </select>
@@ -507,7 +510,7 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
       <div style="width:40px;height:40px;border-radius:12px;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--primary);cursor:pointer;font-weight:700" onclick="detailQty(1)">+</div>
     </div>
   </div>
-    <div style="padding:14px 20px;background:var(--card);border-top:1px solid var(--card-border);display:flex;gap:8px">
+    <div class="pd-btn-bar">
       <button class="btn btn-outline" style="flex:1" onclick="closeDetail()">رجوع</button>
       <button class="btn btn-primary" style="flex:2" onclick="addFromDetail()"><i class="fas fa-cart-plus"></i> أضف للسلة</button>
     </div>
@@ -757,12 +760,9 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
 <div class="toast" id="toast"></div>
 
 <script>
-// Clear old service worker caches to force fresh load
-if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
-  try { navigator.serviceWorker.getRegistrations().then(function(regs) { regs.forEach(function(r) { r.unregister(); }); }); } catch(e){}
-}
+// Clear old caches to force fresh load (keep service worker for push)
 if (typeof caches !== 'undefined') {
-  try { caches.keys().then(function(names) { names.forEach(function(n) { caches.delete(n); }); }); } catch(e){}
+  try { caches.keys().then(function(names) { names.forEach(function(n) { if (n.indexOf('supermarket-v') === 0 && n !== 'supermarket-v7') caches.delete(n); }); }); } catch(e){}
 }
 var token = localStorage.getItem('token');
 var user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -1503,7 +1503,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   setTimeout(function() { document.getElementById('splash').classList.add('hide'); }, 1000);
   // PWA register
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(function() {});
+    navigator.serviceWorker.register('/sw.js').then(function() {
+      if (token && 'Notification' in window && Notification.permission === 'granted') subscribePush();
+    }).catch(function() {});
   }
   // Apply lang direction
   document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -1563,16 +1565,28 @@ function showAuth() {
   applyTranslations();
 }
 
+var authMode = 'login';
+function toggleAuthMode() {
+  authMode = authMode === 'login' ? 'register' : 'login';
+  document.getElementById('auth-btn-label').textContent = authMode === 'login' ? 'دخول' : 'تسجيل جديد';
+  document.getElementById('auth-switch-text').textContent = authMode === 'login' ? 'ليس لديك حساب؟' : 'لديك حساب بالفعل؟';
+  document.getElementById('auth-switch-link').textContent = authMode === 'login' ? 'تسجيل جديد' : 'دخول';
+}
 function doAuth() {
   var phone = document.getElementById('phone-input').value.trim();
   var name = document.getElementById('name-input').value.trim();
-  if (!phone || phone.length < 7) { toast('أدخل رقم هاتف صحيح (9 أرقام)', 'error'); return; }
-  api('POST', '/api/auth/register', { phone: phone, name: name || undefined })
+  var pass = document.getElementById('pass-input').value;
+  if (!phone || phone.length < 9) { toast('أدخل رقم هاتف صحيح (9 أرقام)', 'error'); return; }
+  if (!pass || pass.length < 4) { toast('كلمة السر مطلوبة (4 أحرف على الأقل)', 'error'); return; }
+  var body = { phone: phone, password: pass };
+  var url = '/api/auth/' + (authMode === 'login' ? 'login' : 'register');
+  if (authMode === 'register' && name) body.name = name;
+  api('POST', url, body)
     .then(function(res) {
       saveToken(res.token);
       saveUser(res.user);
       document.getElementById('auth-view').classList.remove('show');
-      if (!res.user.dob || res.user.name === 'مستخدم' || res.user.name === '') {
+      if (authMode === 'register' && (!res.user.dob || res.user.name === 'مستخدم' || res.user.name === '')) {
         showCompleteProfile();
       } else {
         initApp();
@@ -1609,6 +1623,7 @@ function saveCompleteProfile() {
 }
 
 function logout() {
+  unsubscribePush();
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   token = null;
@@ -1626,6 +1641,7 @@ function initApp() {
   loadData();
   updateCartBadge();
   requestNotifPerm();
+  if ('Notification' in window && Notification.permission === 'granted') subscribePush();
   updateNotifBadge();
   loadWatched();
   initSocketAuth();
@@ -1817,7 +1833,7 @@ function loadProducts(cat, q) {
     .then(function(data) {
       products = data;
       if (cat !== undefined && cat !== null) {
-        renderProducts('cat-products', data);
+        renderCatChunked(data);
       }
       renderProducts('featured-products', data.slice(0, 6));
       // Populate category filter dropdown
@@ -1852,9 +1868,12 @@ function filterProducts() {
     if (catFilter) match = match && (p.cat == catFilter || p.category == catFilter);
     return match;
   });
-  renderProducts('cat-products', filtered);
+  renderCatChunked(filtered);
 }
 
+var filterDebounce = null, barcodeDebounce = null;
+function debouncedFilter() { if (filterDebounce) clearTimeout(filterDebounce); filterDebounce = setTimeout(filterProducts, 300); }
+function debouncedBarcode() { if (barcodeDebounce) clearTimeout(barcodeDebounce); barcodeDebounce = setTimeout(searchBarcode, 300); }
 function searchBarcode() {
   filterProducts();
 }
@@ -1869,7 +1888,7 @@ function renderProducts(containerId, prods) {
   var html = '';
   for (var i = 0; i < prods.length; i++) {
     var p = prods[i];
-    var imgHtml = p.image ? '<img src="' + p.image + '" alt="' + p.name + '">' : '<div class="ph-icon"><i class="fas fa-box"></i></div>';
+    var imgHtml = p.image ? '<img loading="lazy" src="' + p.image + '" alt="' + p.name + '">' : '<div class="ph-icon"><i class="fas fa-box"></i></div>';
     var badgHtml = p.badge ? '<div class="p-badge">' + p.badge + '</div>' : '';
     if (!badgHtml && p.discount) badgHtml = '<div class="p-badge" style="background:#EF4444">-' + p.discount + '%</div>';
     if (!badgHtml && p.stock !== undefined && p.stock > 0 && p.stock <= 5) badgHtml = '<div class="p-badge" style="background:var(--warn);font-size:9px">مخزون محدود</div>';
@@ -1897,6 +1916,67 @@ function renderProducts(containerId, prods) {
     html += '</div></div></div>';
   }
   el.innerHTML = html;
+}
+
+// ==== INFINITE SCROLL (chunked product grid) ====
+var catChunk = { list: [], shown: 0, size: 24, sentinel: null };
+function renderCatChunked(list) {
+  var el = document.getElementById('cat-products');
+  if (!el) return;
+  catChunk.list = list || [];
+  catChunk.shown = 0;
+  if (catChunk.sentinel) { catChunk.sentinel.remove(); catChunk.sentinel = null; }
+  if (!catChunk.list.length) { el.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:30px 20px"><div class="es-icon"><i class="fas fa-box-open"></i></div><h3>لا توجد منتجات</h3></div>'; return; }
+  el.innerHTML = '';
+  appendCatChunk();
+  catChunk.sentinel = document.createElement('div');
+  catChunk.sentinel.id = 'cat-chunk-sentinel';
+  catChunk.sentinel.style.height = '1px';
+  el.appendChild(catChunk.sentinel);
+  if (!catChunk.obs) {
+    catChunk.obs = new IntersectionObserver(function(entries) {
+      if (entries[0] && entries[0].isIntersecting) appendCatChunk();
+    }, { rootMargin: '600px' });
+  }
+  catChunk.obs.observe(catChunk.sentinel);
+}
+function appendCatChunk() {
+  var el = document.getElementById('cat-products');
+  if (!el || !catChunk.list) return;
+  var end = Math.min(catChunk.shown + catChunk.size, catChunk.list.length);
+  if (end <= catChunk.shown) { if (catChunk.obs && catChunk.sentinel) catChunk.obs.unobserve(catChunk.sentinel); return; }
+  var html = '';
+  for (var i = catChunk.shown; i < end; i++) {
+    var p = catChunk.list[i];
+    var imgHtml = p.image ? '<img loading="lazy" src="' + p.image + '" alt="' + p.name + '">' : '<div class="ph-icon"><i class="fas fa-box"></i></div>';
+    var badgHtml = p.badge ? '<div class="p-badge">' + p.badge + '</div>' : '';
+    if (!badgHtml && p.discount) badgHtml = '<div class="p-badge" style="background:#EF4444">-' + p.discount + '%</div>';
+    if (!badgHtml && p.stock !== undefined && p.stock > 0 && p.stock <= 5) badgHtml = '<div class="p-badge" style="background:var(--warn);font-size:9px">مخزون محدود</div>';
+    var isFav = favorites.indexOf(p.id) !== -1;
+    html += '<div class="prod-card" onclick="openDetail(' + p.id + ')">';
+    html += '<div class="p-img">' + imgHtml + badgHtml + '</div>';
+    if (p.stock === 0) html += '<div class="watch-btn' + (watchedIds.indexOf(p.id) !== -1 ? ' active' : '') + '" onclick="event.stopPropagation();toggleWatch(' + p.id + ',this)" title="نبهني عند التوفر"><i class="fas fa-eye' + (watchedIds.indexOf(p.id) !== -1 ? '' : '-slash') + '"></i></div>';
+    html += '<div class="fav-btn' + (isFav ? ' active' : '') + '" onclick="event.stopPropagation();toggleFavorite(' + p.id + ',this)"><i class="fas fa-heart"></i></div>';
+    var inList = shoppingList.indexOf(p.id) !== -1;
+    html += '<div class="fav-btn' + (inList ? ' active' : '') + '" style="left:36px;right:auto" onclick="event.stopPropagation();toggleShoppingList(' + p.id + ',this)" title="قائمة التسوق"><i class="fas fa-list"></i></div>';
+    html += '<div class="p-info">';
+    html += '<div class="p-name">' + p.name + (p.stock === 0 ? ' <span style="color:var(--danger);font-size:10px;font-weight:400">نفد</span>' : '') + '</div>';
+    html += '<div class="p-sub">' + (p.sub || '') + ' - ' + (p.unit || '') + '</div>';
+    html += '<div class="p-bottom">';
+    var salePrice = p.discount ? p.price * (1 - p.discount / 100) : null;
+    html += '<div class="p-price">' + (salePrice ? fmt(salePrice) : fmt(p.price)) + '</div>';
+    if (p.stock > 0) {
+      html += '<div style="display:flex;gap:4px">';
+      html += '<div class="add-btn" style="width:26px;height:26px;font-size:11px" onclick="event.stopPropagation();addToCartQty(' + p.id + ',1)"><i class="fas fa-plus"></i></div>';
+      html += '</div>';
+    } else {
+      html += '<div style="font-size:10px;color:var(--danger);font-weight:600">غير متوفر</div>';
+    }
+    html += '</div></div></div>';
+  }
+  catChunk.shown = end;
+  el.insertAdjacentHTML('beforeend', html);
+  if (end >= catChunk.list.length && catChunk.obs && catChunk.sentinel) catChunk.obs.unobserve(catChunk.sentinel);
 }
 
 function addToCartQty(id, qty) {
@@ -3241,8 +3321,46 @@ function renderNotifs() {
   el.innerHTML = notifs.map(n => '<div style="padding:8px;border-bottom:1px solid var(--card-border);' + (!n.read ? 'background:var(--primary-bg);border-radius:8px;' : '') + '"><div style="font-weight:700;font-size:12px">' + n.title + '</div><div style="font-size:11px;color:var(--text2)">' + n.body + '</div><div style="font-size:10px;color:var(--text3);margin-top:2px">' + new Date(n.time).toLocaleString('ar-SY') + '</div></div>').join('');
 }
 function requestNotifPerm() {
-  if ('Notification' in window && Notification.permission === 'default')
-    Notification.requestPermission();
+  if (!('Notification' in window)) return;
+  Notification.requestPermission().then(function(perm) {
+    if (perm === 'granted') subscribePush();
+  });
+}
+function subscribePush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (!token) return;
+  navigator.serviceWorker.ready.then(function(reg) {
+    return reg.pushManager.getSubscription();
+  }).then(function(sub) {
+    if (sub) return sub;
+    return fetch('/api/push/vapid-public-key').then(function(r) { return r.json(); }).then(function(data) {
+      var urlB64 = data.publicKey;
+      var converted = urlB64ToUint8Array(urlB64);
+      return navigator.serviceWorker.ready.then(function(reg) {
+        return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: converted });
+      });
+    });
+  }).then(function(sub) {
+    return api('POST', '/api/push/subscribe', { subscription: sub });
+  }).catch(function(e) { console.log('Push subscribe error:', e); });
+}
+function unsubscribePush() {
+  if (!('serviceWorker' in navigator)) return Promise.resolve();
+  return navigator.serviceWorker.ready.then(function(reg) {
+    return reg.pushManager.getSubscription();
+  }).then(function(sub) {
+    if (sub) return sub.unsubscribe();
+  }).then(function() {
+    return api('DELETE', '/api/push/subscribe', null);
+  }).catch(function() {});
+}
+function urlB64ToUint8Array(base64String) {
+  var padding = '='.repeat((4 - base64String.length % 4) % 4);
+  var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  var rawData = window.atob(base64);
+  var outputArray = new Uint8Array(rawData.length);
+  for (var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
 }
 function toggleNotifSound() {
   notifSound = !notifSound;
