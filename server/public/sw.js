@@ -1,4 +1,4 @@
-var CACHE = 'supermarket-v6';
+var CACHE = 'supermarket-v7';
 self.addEventListener('install', function(e) {
   e.waitUntil(self.skipWaiting());
 });
@@ -24,4 +24,29 @@ self.addEventListener('fetch', e => {
       return caches.match(e.request);
     })
   );
+});
+self.addEventListener('push', function(e) {
+  var data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (err) {}
+  var title = data.title || 'سوبر ماركت';
+  var body = data.body || '';
+  var url = data.url || '/customer.html?v=8';
+  var options = {
+    body: body,
+    icon: '/uploads/icon-192.png',
+    badge: '/uploads/icon-192.png',
+    data: { url: url },
+    vibrate: [200, 100, 200]
+  };
+  e.waitUntil(self.registration.showNotification(title, options));
+});
+self.addEventListener('notificationclick', function(e) {
+  e.notification.close();
+  var url = (e.notification.data && e.notification.data.url) || '/customer.html?v=8';
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list) {
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].url.indexOf(url.split('?')[0]) !== -1) { return list[i].focus(); }
+    }
+    return clients.openWindow(url);
+  }));
 });
