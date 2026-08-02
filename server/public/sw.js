@@ -1,4 +1,4 @@
-var CACHE = 'supermarket-v3';
+var CACHE = 'supermarket-v4';
 var urls = ['/', '/customer.html?v=2', '/admin.html?v=2', '/manifest.json'];
 self.addEventListener('install', function(e) {
   e.waitUntil(caches.open(CACHE).then(function(c) { return c.addAll(urls); }).then(function() { return self.skipWaiting(); }));
