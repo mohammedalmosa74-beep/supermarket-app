@@ -533,6 +533,9 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
     <div class="ck-section">
       <h3><i class="fas fa-map-marker-alt"></i> عنوان التوصيل</h3>
       <input type="text" class="addr-inp" id="addr-input" placeholder="أدخل العنوان بالتفصيل..." style="margin-bottom:8px">
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input type="text" class="addr-inp" id="addr-floor" placeholder="الطابق / الشقة (اختياري)" style="margin:0;flex:1;font-size:13px;padding:12px">
+      </div>
       <input type="hidden" id="order-lat" value="">
       <input type="hidden" id="order-lng" value="">
       <div style="display:flex;gap:6px;margin-bottom:8px">
@@ -2499,6 +2502,7 @@ function placeOrder() {
   api('POST', '/api/orders', {
     items: items,
     address: address,
+    floor: floor,
     lat: lat ? parseFloat(lat) : null,
     lng: lng ? parseFloat(lng) : null,
     payment: selectedPay,
@@ -2719,6 +2723,7 @@ function showOrderDetail(id) {
   if (o.lat && o.lng) mapLink = ' <a href="https://www.google.com/maps?q=' + o.lat + ',' + o.lng + '" target="_blank" style="color:var(--primary);font-size:11px"><i class="fas fa-map-marked-alt"></i> فتح على الخريطة</a>';
   else if (o.address) mapLink = ' <a href="https://www.google.com/maps/search/' + encodeURIComponent(o.address) + '" target="_blank" style="color:var(--primary);font-size:11px"><i class="fas fa-map-marked-alt"></i> فتح على الخريطة</a>';
   html += '<div><strong>العنوان:</strong> ' + (o.address || '-') + mapLink + '</div>';
+  html += '<div><strong>الطابق / الشقة:</strong> ' + (o.floor || '-') + '</div>';
   html += '<div><strong>جهة الاتصال:</strong> ' + (o.contactPhone || o.phone || '-') + '</div>';
   html += '<div><strong>الدفع:</strong> ' + (o.payment === 'cash' ? 'كاش' : o.payment === 'syriatel' ? 'سيريتل كاش' : o.payment === 'shamcash' ? 'شام كاش' : o.payment) + '</div>';
   if (o.deliverySlot) html += '<div><strong>وقت التوصيل:</strong> ' + o.deliverySlot + '</div>';
