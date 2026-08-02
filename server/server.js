@@ -352,7 +352,8 @@ app.post('/api/orders/:id/delivery', adminAuth, validate([
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
   db.get('orders').find({ id: req.params.id }).assign({ deliveryPerson: req.body.name, deliveryPersonPhone: req.body.phone || '', deliveryAssignedAt: Date.now() }).write();
   io.to('user:' + order.userId).emit('delivery-assigned', { orderId: order.id, name: req.body.name, phone: req.body.phone || '' });
-  io.to('user:' + order.userId).emit('order-status', { id: order.id, status: order.status, timeline: order.timeline });\n  if (order.userId) sendPushToUser(order.userId, 'تحديث طلبك', 'حالة طلبك #' + order.id + ' أصبحت: ' + (order.status === 'pending' ? 'قيد الانتظار' : order.status === 'confirmed' ? 'مؤكد' : order.status === 'preparing' ? 'قيد التحضير' : order.status === 'delivering' ? 'قيد التوصيل' : order.status === 'delivered' ? 'تم التوصيل' : 'ملغي'), '/customer.html?v=8');
+  io.to('user:' + order.userId).emit('order-status', { id: order.id, status: order.status, timeline: order.timeline });
+  if (order.userId) sendPushToUser(order.userId, 'تحديث طلبك', 'حالة طلبك #' + order.id + ' أصبحت: ' + (order.status === 'pending' ? 'قيد الانتظار' : order.status === 'confirmed' ? 'مؤكد' : order.status === 'preparing' ? 'قيد التحضير' : order.status === 'delivering' ? 'قيد التوصيل' : order.status === 'delivered' ? 'تم التوصيل' : 'ملغي'), '/customer.html?v=8');
   // Notify the delivery person
   var dp = db.get('deliveryPersons').find({ name: req.body.name }).value();
   if (dp) {
@@ -659,7 +660,8 @@ app.put('/api/orders/:id/status', adminAuth, (req, res) => {
   if (status === 'delivered') { updates.eta = null; if (order.value().total) addPoints(order.value().userId, order.value().total); }
   order.assign(updates).write();
   io.to('admin').emit('order-status', { id: req.params.id, status, timeline: updates.timeline });
-  io.to('user:' + order.value().userId).emit('order-status', { id: req.params.id, status, timeline: updates.timeline });\n  if (order.value().userId) sendPushToUser(order.value().userId, 'تحديث طلبك', 'حالة طلبك #' + req.params.id + ' أصبحت: ' + (status === 'pending' ? 'قيد الانتظار' : status === 'confirmed' ? 'مؤكد' : status === 'preparing' ? 'قيد التحضير' : status === 'delivering' ? 'قيد التوصيل' : status === 'delivered' ? 'تم التوصيل' : 'ملغي'), '/customer.html?v=8');
+  io.to('user:' + order.value().userId).emit('order-status', { id: req.params.id, status, timeline: updates.timeline });
+  if (order.value().userId) sendPushToUser(order.value().userId, 'تحديث طلبك', 'حالة طلبك #' + req.params.id + ' أصبحت: ' + (status === 'pending' ? 'قيد الانتظار' : status === 'confirmed' ? 'مؤكد' : status === 'preparing' ? 'قيد التحضير' : status === 'delivering' ? 'قيد التوصيل' : status === 'delivered' ? 'تم التوصيل' : 'ملغي'), '/customer.html?v=8');
   db.get('adminLog').push({ action: 'status', detail: `طلب ${req.params.id}: ${status}`, time: Date.now() }).write();
   res.json({ success: true });
 });
