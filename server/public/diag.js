@@ -1,0 +1,1 @@
+﻿document.getElementById('r2').textContent='2. سكربت خارجي: يعمل!';document.getElementById('r2').style.color='green';
