@@ -1,7 +1,6 @@
-var CACHE = 'supermarket-v5';
-var urls = ['/', '/customer.html?v=8', '/admin.html', '/manifest.json'];
+var CACHE = 'supermarket-v6';
 self.addEventListener('install', function(e) {
-  e.waitUntil(caches.open(CACHE).then(function(c) { return c.addAll(urls); }).then(function() { return self.skipWaiting(); }));
+  e.waitUntil(self.skipWaiting());
 });
 self.addEventListener('activate', function(e) {
   e.waitUntil(
@@ -11,15 +10,18 @@ self.addEventListener('activate', function(e) {
   );
 });
 self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
   if (e.request.url.includes('/api/')) return;
-  if (e.request.url.includes('socket.io') || e.request.url.includes('socket.io.js')) return;
+  if (e.request.url.includes('socket.io')) return;
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-      if (res.ok && e.request.method === 'GET') {
+    fetch(e.request).then(function(res) {
+      if (res && res.ok) {
         var copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy));
+        caches.open(CACHE).then(function(c) { c.put(e.request, copy); });
       }
       return res;
-    }))
+    }).catch(function() {
+      return caches.match(e.request);
+    })
   );
 });
