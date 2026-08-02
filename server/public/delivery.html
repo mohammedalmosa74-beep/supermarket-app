@@ -177,6 +177,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <script>
 // ==== CONFIG ====
 var TK='alm_del_tok',tok=localStorage.getItem(TK),me=null,ords=[],sk=null,wi=null,sl=false,coi=null,ari=null,art=0;
+var LANG='ar';
+var _L={detail_error:'خطأ: ',btn_deliver:'تم التوصيل',cash_label:'المبلغ المحصل (ل.س)',cash_collected_str:'تم تحصيل ',currency:'ل.س',delivered_done:'تم تأكيد التوصيل',code_wrong:'كود التأكيد خاطئ',note_placeholder:'ملاحظة التوصيل...',eta_section:'الوقت المتوقع للتوصيل',eta_btn_15:'15 د',eta_btn_30:'30 د',eta_btn_45:'45 د',eta_btn_1h:'1 س',eta_btn_1_5h:'1.5 س',eta_btn_2h:'2 س',eta_placeholder:'الوقت بالدقائق',eta_minutes:'دقيقة',eta_submit:'حفظ',eta_current:'الوقت الحالي ',eta_from_now:' من الآن',eta_empty_error:'أدخل وقتاً صحيحاً',eta_success:'تم ضبط الوقت ',eta_saved:' دقيقة',sharing_title:'مشاركة الموقع نشطة',sharing_stopped:'تم إيقاف مشاركة الموقع',sharing_active:'مشاركة الموقع نشطة',sharing_error:'الموقع غير مدعوم في هذا المتصفح',sharing_err_msg:'خطأ في الموقع: ',route_no_active:'لا توجد طلبات نشطة',route_title:'مسارات التوصيل'};
+function _(k){return _L[k]||k;}
 // ==== UTILS ====
 function t(m,p){var e=document.getElementById('tt');e.textContent=m;e.style.display='block';e.style.background=p==='e'?'#DC2626':p==='o'?'#16A34A':'#1F2937';e.classList.add('sh');setTimeout(function(){e.classList.remove('sh');e.style.display='none';},3000);}
 function api(m,u,b){var o={method:m,headers:{}};if(b){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b);}var t2=localStorage.getItem(TK);if(t2)o.headers['Authorization']='Bearer '+t2;return fetch(u,o).then(function(r){return r.json().then(function(d){if(!r.ok){var e=new Error(d.error||'خطأ');e.status=r.status;throw e;}return d;});});}
