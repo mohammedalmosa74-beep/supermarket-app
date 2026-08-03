@@ -218,6 +218,8 @@ function auth(req, res, next) {
     // Check if user still exists
     var user = db.get('users').find({ id: req.user.id }).value();
     if (!user) return res.status(401).json({ error: 'الحساب لم يعد موجوداً' });
+    // Token version check: old tokens die after password change
+    if (req.user.pwVer && user.pwVer && req.user.pwVer !== user.pwVer) return res.status(401).json({ error: 'انتهت الجلسة، سجل دخولك من جديد' });
     if (user.blocked) return res.status(403).json({ error: 'حسابك محظور، يرجى التواصل مع الإدارة', blockReason: user.blockReason || '' });
     next();
   } catch {
@@ -231,6 +233,8 @@ function adminAuth(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     if (!decoded.admin) return res.status(403).json({ error: 'Not admin' });
+    var settings = db.get('settings').value();
+    if (decoded.pwVer && settings.adminVer && decoded.pwVer !== settings.adminVer) return res.status(401).json({ error: 'انتهت الجلسة، سجل دخولك من جديد' });
     req.admin = decoded;
     next();
   } catch {
@@ -253,14 +257,14 @@ app.post('/api/auth/register', authLimiter, validate([
       return res.status(409).json({ error: 'هذا الرقم مسجل بالفعل، سجل دخولك بكلمة السر الخاصة بك' });
     }
     const pwHash = bcrypt.hashSync(password, 10);
-    const user = { id: Date.now().toString(36), phone, passwordHash: pwHash, name: safeName, dob: '', city: '', address: '', points: 0, profile: {}, createdAt: new Date().toISOString() };
+    const user = { id: Date.now().toString(36), phone, passwordHash: pwHash, name: safeName, dob: '', city: '', address: '', points: 0, pwVer: 1, profile: {}, createdAt: new Date().toISOString() };
     db.get('users').push(user).write();
     // Generate referral code for new user
     var refCode = (safeName || 'user').substring(0, 3).toUpperCase() + user.id.slice(-4);
     if (!db.get('referrals').find({ code: refCode }).value()) {
       db.get('referrals').push({ code: refCode, userId: user.id, name: user.name, used: false }).write();
     }
-    const token = jwt.sign({ id: user.id, phone: user.phone }, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ id: user.id, phone: user.phone, pwVer: user.pwVer || 1 }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, user: { id: user.id, phone: user.phone, name: user.name, dob: '', city: '', points: 0 } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -275,7 +279,7 @@ app.post('/api/auth/login', authLimiter, validate([
     if (!user) return res.status(404).json({ error: 'هذا الرقم غير مسجل، يرجى إنشاء حساب جديد' });
     if (!user.passwordHash) return res.status(401).json({ error: 'هذا الحساب لا يملك كلمة سر، سجل حساباً جديداً برقم مختلف' });
     if (!bcrypt.compareSync(password, user.passwordHash)) return res.status(401).json({ error: 'كلمة السر غير صحيحة' });
-    const token = jwt.sign({ id: user.id, phone: user.phone }, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ id: user.id, phone: user.phone, pwVer: user.pwVer || 1 }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, user: { id: user.id, phone: user.phone, name: user.name, dob: user.dob, city: user.city, points: user.points || 0 } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -286,7 +290,7 @@ app.post('/api/auth/admin', authLimiter, validate([
   const { password } = req.body;
   const settings = db.get('settings').value();
   if (bcrypt.compareSync(password, settings.adminPW)) {
-    const token = jwt.sign({ admin: true }, JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ admin: true, pwVer: settings.adminVer || 1 }, JWT_SECRET, { expiresIn: '24h' });
     return res.json({ token });
   }
   res.status(401).json({ error: 'كلمة سر خطأ' });
@@ -320,7 +324,32 @@ app.put('/api/auth/profile', auth, validate([
   res.json({ success: true });
 });
 
-// ============ REFERRAL ============
+// Change own password (invalidates all old tokens via pwVer bump)
+app.put('/api/auth/password', auth, authLimiter, validate([
+  { name: 'oldPassword', in: 'body', required: true, type: 'string', minLength: 1, message: 'كلمة السر الحالية مطلوبة' },
+  { name: 'newPassword', in: 'body', required: true, type: 'string', minLength: 4, maxLength: 30, message: 'كلمة السر الجديدة مطلوبة (4-30 حرف)' }
+]), (req, res) => {
+  try {
+    var userEnt = db.get('users').find({ id: req.user.id });
+    var user = userEnt.value();
+    if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
+    if (!user.passwordHash) return res.status(400).json({ error: 'هذا الحساب لا يملك كلمة سر' });
+    if (!bcrypt.compareSync(req.body.oldPassword, user.passwordHash)) return res.status(401).json({ error: 'كلمة السر الحالية غير صحيحة' });
+    userEnt.assign({ passwordHash: bcrypt.hashSync(req.body.newPassword, 10), pwVer: (user.pwVer || 1) + 1 }).write();
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Admin: reset a customer's password (invalidates their tokens)
+app.put('/api/customers/:id/password', adminAuth, adminLimiter, validate([
+  { name: 'password', in: 'body', required: true, type: 'string', minLength: 4, maxLength: 30, message: 'كلمة السر الجديدة مطلوبة (4-30 حرف)' }
+]), (req, res) => {
+  var userEnt = db.get('users').find({ id: req.params.id });
+  if (!userEnt.value()) return res.status(404).json({ error: 'العميل غير موجود' });
+  userEnt.assign({ passwordHash: bcrypt.hashSync(req.body.password, 10), pwVer: (userEnt.value().pwVer || 1) + 1 }).write();
+  db.get('adminLog').push({ action: 'password-reset', detail: 'إعادة تعيين كلمة سر زبون ' + (userEnt.value().phone || req.params.id), time: Date.now() }).write();
+  res.json({ success: true });
+});
 app.get('/api/referral/my', auth, (req, res) => {
   var ref = db.get('referrals').find({ userId: req.user.id }).value();
   if (!ref) return res.status(404).json({ error: 'لا يوجد كود إحالة' });
@@ -1013,10 +1042,22 @@ app.put('/api/settings', adminAuth, validate([
   for (const k of allowed) {
     if (req.body[k] !== undefined) updates[k] = req.body[k];
   }
-  if (updates.adminPW) updates.adminPW = bcrypt.hashSync(updates.adminPW, 10);
+  if (updates.adminPW) { updates.adminPW = bcrypt.hashSync(updates.adminPW, 10); updates.adminVer = (db.get('settings').value().adminVer || 1) + 1; }
   db.get('settings').assign(updates).write();
   if (req.body.dealEnd !== undefined) db.set('dealEnd', req.body.dealEnd).write();
   if (req.body.promo !== undefined) io.emit('deal-update', db.get('promo').value());
+  res.json({ success: true });
+});
+
+// Change admin password (requires current password, invalidates old admin sessions)
+app.put('/api/auth/admin-password', adminAuth, authLimiter, validate([
+  { name: 'oldPassword', in: 'body', required: true, type: 'string', minLength: 1, message: 'كلمة السر الحالية مطلوبة' },
+  { name: 'newPassword', in: 'body', required: true, type: 'string', minLength: 4, maxLength: 30, message: 'كلمة السر الجديدة مطلوبة (4-30 حرف)' }
+]), (req, res) => {
+  var settings = db.get('settings').value();
+  if (!bcrypt.compareSync(req.body.oldPassword, settings.adminPW)) return res.status(401).json({ error: 'كلمة السر الحالية غير صحيحة' });
+  db.get('settings').assign({ adminPW: bcrypt.hashSync(req.body.newPassword, 10), adminVer: (settings.adminVer || 1) + 1 }).write();
+  db.get('adminLog').push({ action: 'admin-password', detail: 'تغيير كلمة سر الأدمن', time: Date.now() }).write();
   res.json({ success: true });
 });
 
@@ -1420,6 +1461,10 @@ function deliveryAuth(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded.role !== 'delivery') return res.status(403).json({ error: 'Not a delivery person' });
+    var person = db.get('deliveryPersons').find({ id: decoded.id }).value();
+    if (!person) return res.status(401).json({ error: 'الحساب لم يعد موجوداً' });
+    if (decoded.pwVer && person.pwVer && decoded.pwVer !== person.pwVer) return res.status(401).json({ error: 'انتهت الجلسة، سجل دخولك من جديد' });
+    if (person.active === false) return res.status(403).json({ error: 'هذا الحساب موقوف' });
     req.delivery = decoded;
     next();
   } catch {
@@ -1435,7 +1480,7 @@ app.post('/api/delivery/login', authLimiter, validate([
     const person = db.get('deliveryPersons').find({ phone }).value();
     if (!person || !bcrypt.compareSync(password, person.password)) return res.status(401).json({ error: 'رقم الهاتف أو كلمة السر خطأ' });
     if (person.active === false) return res.status(403).json({ error: 'هذا الحساب موقوف، يرجى التواصل مع الإدارة' });
-    const token = jwt.sign({ id: person.id, phone: person.phone, name: person.name, role: 'delivery' }, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ id: person.id, phone: person.phone, name: person.name, role: 'delivery', pwVer: person.pwVer || 1 }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, person: { id: person.id, name: person.name, phone: person.phone } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1456,7 +1501,7 @@ app.post('/api/delivery/persons', adminAuth, validate([
   try {
     const { name, phone, password } = req.body;
     if (db.get('deliveryPersons').find({ phone }).value()) return res.status(400).json({ error: 'هذا الرقم مسجل مسبقاً' });
-    const person = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, phone, password: bcrypt.hashSync(password, 10), active: true, createdAt: new Date().toISOString() };
+    const person = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, phone, password: bcrypt.hashSync(password, 10), pwVer: 1, active: true, createdAt: new Date().toISOString() };
     db.get('deliveryPersons').push(person).write();
     res.json({ success: true, person });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1468,6 +1513,7 @@ app.put('/api/delivery/persons/:id', adminAuth, async (req, res) => {
   if (req.body.name) updates.name = req.body.name;
   if (req.body.phone) updates.phone = req.body.phone;
   if (req.body.password) updates.password = bcrypt.hashSync(req.body.password, 10);
+  if (req.body.password) updates.pwVer = (person.value().pwVer || 1) + 1;
   if (req.body.active !== undefined) updates.active = req.body.active;
   person.assign(updates).write();
   res.json({ success: true });
