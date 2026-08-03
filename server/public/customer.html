@@ -784,8 +784,9 @@ if (typeof caches !== 'undefined') {
 }
 var token = localStorage.getItem('token');
 var user = JSON.parse(localStorage.getItem('user') || 'null');
-var cart = JSON.parse(localStorage.getItem('cart') || '[]');
-var favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+function uk(key) { return (user && user.id ? 'u' + user.id + '.' : '') + key; }
+var cart = JSON.parse(localStorage.getItem(uk('cart')) || '[]');
+var favorites = JSON.parse(localStorage.getItem(uk('favorites')) || '[]');
 var watchedIds = [];
 var products = [];
 var categories = [];
@@ -799,10 +800,10 @@ var selectedSlot = '9-12';
 var appliedCoupon = null;
 var appliedDiscount = 0;
 var usePoints = false;
-var recentSearches = JSON.parse(localStorage.getItem('recent_searches') || '[]');
-var savedAddresses = JSON.parse(localStorage.getItem('saved_addresses') || '[]');
-var shoppingList = JSON.parse(localStorage.getItem('shopping_list') || '[]');
-var recentlyViewed = JSON.parse(localStorage.getItem('recently_viewed') || '[]');
+var recentSearches = JSON.parse(localStorage.getItem(uk('recent_searches')) || '[]');
+var savedAddresses = JSON.parse(localStorage.getItem(uk('saved_addresses')) || '[]');
+var shoppingList = JSON.parse(localStorage.getItem(uk('shopping_list')) || '[]');
+var recentlyViewed = JSON.parse(localStorage.getItem(uk('recently_viewed')) || '[]');
 var lang = localStorage.getItem('lang') || 'ar';
 
 // Translation system
@@ -1479,10 +1480,21 @@ function applyTranslations() {
 
 function saveToken(t) { token = t; localStorage.setItem('token', t); }
 function saveUser(u) { user = u; localStorage.setItem('user', JSON.stringify(u)); }
-function saveCart() { localStorage.setItem('cart', JSON.stringify(cart)); }
-function saveFavorites() { localStorage.setItem('favorites', JSON.stringify(favorites)); }
-function saveShoppingList() { localStorage.setItem('shopping_list', JSON.stringify(shoppingList)); }
-function saveRecentlyViewed() { localStorage.setItem('recently_viewed', JSON.stringify(recentlyViewed)); }
+function saveCart() { localStorage.setItem(uk('cart'), JSON.stringify(cart)); }
+function saveFavorites() { localStorage.setItem(uk('favorites'), JSON.stringify(favorites)); }
+function saveShoppingList() { localStorage.setItem(uk('shopping_list'), JSON.stringify(shoppingList)); }
+function saveRecentlyViewed() { localStorage.setItem(uk('recently_viewed'), JSON.stringify(recentlyViewed)); }
+function resetUserLocalData() {
+  cart = JSON.parse(localStorage.getItem(uk('cart')) || '[]');
+  favorites = JSON.parse(localStorage.getItem(uk('favorites')) || '[]');
+  recentSearches = JSON.parse(localStorage.getItem(uk('recent_searches')) || '[]');
+  savedAddresses = JSON.parse(localStorage.getItem(uk('saved_addresses')) || '[]');
+  shoppingList = JSON.parse(localStorage.getItem(uk('shopping_list')) || '[]');
+  recentlyViewed = JSON.parse(localStorage.getItem(uk('recently_viewed')) || '[]');
+  notifs = JSON.parse(localStorage.getItem(uk('almani_notifs')) || '[]');
+  updateCartBadge();
+  updateNotifBadge();
+}
 function addRecentlyViewed(p) {
   recentlyViewed = recentlyViewed.filter(function(x) { return (x.id || x._id) !== (p.id || p._id); });
   recentlyViewed.unshift({ id: p.id, _id: p._id, name: p.name, price: p.price, image: p.image, discount: p.discount });
@@ -1658,6 +1670,7 @@ function verifyOtp() {
       otpTimer = null;
       saveToken(res.token);
       saveUser(res.user);
+      resetUserLocalData();
       document.getElementById('auth-view').classList.remove('show');
       if (res.isNew || !res.user.dob || res.user.name === 'مستخدم' || res.user.name === '') {
         showCompleteProfile();
@@ -2693,7 +2706,7 @@ function doSearch(q) {
   if (idx !== -1) recentSearches.splice(idx, 1);
   recentSearches.unshift(q);
   if (recentSearches.length > 8) recentSearches = recentSearches.slice(0, 8);
-  localStorage.setItem('recent_searches', JSON.stringify(recentSearches));
+  localStorage.setItem(uk('recent_searches'), JSON.stringify(recentSearches));
   renderRecentSearches();
   api('GET', '/api/products?q=' + encodeURIComponent(q), null, false)
     .then(function(data) {
@@ -2989,9 +3002,9 @@ function setRating(v) {
 }
 function submitRating(id) {
   if (!currentRating) { toast('يرجى اختيار تقييم', 'error'); return; }
-  var ratings = JSON.parse(localStorage.getItem('order_ratings') || '{}');
+  var ratings = JSON.parse(localStorage.getItem(uk('order_ratings')) || '{}');
   ratings[id] = currentRating;
-  localStorage.setItem('order_ratings', JSON.stringify(ratings));
+  localStorage.setItem(uk('order_ratings'), JSON.stringify(ratings));
   closeModal();
   toast('شكراً على تقييمك!', 'success');
 }
@@ -3009,14 +3022,14 @@ function addSavedAddress() {
   var addr = document.getElementById('new-addr-input').value.trim();
   if (!addr) { toast('يرجى إدخال العنوان', 'error'); return; }
   savedAddresses.push(addr);
-  localStorage.setItem('saved_addresses', JSON.stringify(savedAddresses));
+  localStorage.setItem(uk('saved_addresses'), JSON.stringify(savedAddresses));
   document.getElementById('new-addr-input').value = '';
   renderSavedAddresses();
   toast('تم حفظ العنوان', 'success');
 }
 function deleteSavedAddress(i) {
   savedAddresses.splice(i, 1);
-  localStorage.setItem('saved_addresses', JSON.stringify(savedAddresses));
+  localStorage.setItem(uk('saved_addresses'), JSON.stringify(savedAddresses));
   renderSavedAddresses();
 }
 function selectSavedAddress(i) {
@@ -3333,7 +3346,7 @@ switchTab = function(tab) {
   if (tab === 'cart') renderCart();
   if (tab === 'orders' && token) loadOrders();
   if (tab === 'favorites') renderFavorites();
-  if (tab === 'notifications') { renderNotifPage(); notifs.forEach(n => n.read = true); localStorage.setItem('almani_notifs', JSON.stringify(notifs)); updateNotifBadge(); }
+  if (tab === 'notifications') { renderNotifPage(); notifs.forEach(n => n.read = true); localStorage.setItem(uk('almani_notifs'), JSON.stringify(notifs)); updateNotifBadge(); }
   if (tab === 'profile') {
     updateProfileUI();
     if (token) api('GET', '/api/auth/me').then(function(u) { saveUser(u); updateProfileUI(); }).catch(function(){});
@@ -3353,7 +3366,7 @@ switchTab = function(tab) {
 };
 
 // ============ NOTIFICATIONS ============
-let notifs = JSON.parse(localStorage.getItem('almani_notifs') || '[]');
+let notifs = JSON.parse(localStorage.getItem(uk('almani_notifs')) || '[]');
 let notifSound = localStorage.getItem('almani_notif_sound') !== '0';
 let notifVibrate = localStorage.getItem('almani_notif_vibrate') !== '0';
 let notifFilter = 'all';
@@ -3366,7 +3379,7 @@ function addNotif(title, body, opts) {
   const cat = opts.cat || 'order';
   notifs.unshift({ title, body, time: Date.now(), read: false, cat });
   if (notifs.length > 50) notifs = notifs.slice(0, 50);
-  localStorage.setItem('almani_notifs', JSON.stringify(notifs));
+  localStorage.setItem(uk('almani_notifs'), JSON.stringify(notifs));
   updateNotifBadge();
   if (notifSound && opts.sound !== false) {
     if (opts.soundType === 'success') playSuccessSound();
@@ -3426,10 +3439,10 @@ function toggleNotifPanel() {
   const p = document.getElementById('notif-panel');
   p.classList.toggle('show');
   renderNotifs();
-  if (p.classList.contains('show')) { notifs.forEach(n => n.read = true); localStorage.setItem('almani_notifs', JSON.stringify(notifs)); updateNotifBadge(); }
+  if (p.classList.contains('show')) { notifs.forEach(n => n.read = true); localStorage.setItem(uk('almani_notifs'), JSON.stringify(notifs)); updateNotifBadge(); }
 }
-function markAllRead() { notifs.forEach(n => n.read = true); localStorage.setItem('almani_notifs', JSON.stringify(notifs)); updateNotifBadge(); renderNotifs(); if (document.getElementById('notif-page-list')) renderNotifPage(); toast('تم', 'success'); }
-function clearNotifs() { notifs = []; localStorage.setItem('almani_notifs', '[]'); updateNotifBadge(); renderNotifs(); if (document.getElementById('notif-page-list')) renderNotifPage(); toast('تم مسح الإشعارات', 'info'); }
+function markAllRead() { notifs.forEach(n => n.read = true); localStorage.setItem(uk('almani_notifs'), JSON.stringify(notifs)); updateNotifBadge(); renderNotifs(); if (document.getElementById('notif-page-list')) renderNotifPage(); toast('تم', 'success'); }
+function clearNotifs() { notifs = []; localStorage.setItem(uk('almani_notifs'), '[]'); updateNotifBadge(); renderNotifs(); if (document.getElementById('notif-page-list')) renderNotifPage(); toast('تم مسح الإشعارات', 'info'); }
 function renderNotifs() {
   const el = document.getElementById('notif-list');
   if (!el) return;
@@ -3560,7 +3573,7 @@ function renderNotifPage() {
 }
 function markReadNotif(time) {
   var n = notifs.find(function(x) { return x.time === time; });
-  if (n && !n.read) { n.read = true; localStorage.setItem('almani_notifs', JSON.stringify(notifs)); updateNotifBadge(); renderNotifPage(); }
+  if (n && !n.read) { n.read = true; localStorage.setItem(uk('almani_notifs'), JSON.stringify(notifs)); updateNotifBadge(); renderNotifPage(); }
 }
 
 // Socket.IO
