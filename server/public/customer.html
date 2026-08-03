@@ -782,8 +782,18 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
 if (typeof caches !== 'undefined') {
   try { caches.keys().then(function(names) { names.forEach(function(n) { if (n.indexOf('supermarket-v') === 0 && n !== 'supermarket-v7') caches.delete(n); }); }); } catch(e){}
 }
-var token = localStorage.getItem('token');
-var user = JSON.parse(localStorage.getItem('user') || 'null');
+function getCookie(name) {
+  var m = document.cookie.match('(^|;)\\s*' + name + '=([^;]*)');
+  return m ? decodeURIComponent(m[2]) : null;
+}
+function setCookie(name, value, days) {
+  try { document.cookie = name + '=' + encodeURIComponent(value) + ';path=/;max-age=' + (days * 86400); } catch (e) {}
+}
+function delCookie(name) {
+  try { document.cookie = name + '=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT'; } catch (e) {}
+}
+var token = localStorage.getItem('token') || getCookie('app_token');
+var user = JSON.parse(localStorage.getItem('user') || getCookie('app_user') || 'null');
 function uk(key) { return (user && user.id ? 'u' + user.id + '.' : '') + key; }
 var cart = JSON.parse(localStorage.getItem(uk('cart')) || '[]');
 var favorites = JSON.parse(localStorage.getItem(uk('favorites')) || '[]');
@@ -1478,8 +1488,16 @@ function applyTranslations() {
   }
 }
 
-function saveToken(t) { token = t; localStorage.setItem('token', t); }
-function saveUser(u) { user = u; localStorage.setItem('user', JSON.stringify(u)); }
+function saveToken(t) { token = t; localStorage.setItem('token', t); setCookie('app_token', t, 30); }
+function saveUser(u) { user = u; localStorage.setItem('user', JSON.stringify(u)); setCookie('app_user', JSON.stringify(u), 30); }
+function clearSession() {
+  token = null;
+  user = null;
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  delCookie('app_token');
+  delCookie('app_user');
+}
 function saveCart() { localStorage.setItem(uk('cart'), JSON.stringify(cart)); }
 function saveFavorites() { localStorage.setItem(uk('favorites'), JSON.stringify(favorites)); }
 function saveShoppingList() { localStorage.setItem(uk('shopping_list'), JSON.stringify(shoppingList)); }
@@ -1526,10 +1544,7 @@ function api(method, path, body, authed) {
   return fetch(path, opts).then(function(r) {
     return r.json().then(function(data) {
       if (r.status === 401 && authed) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        token = null;
-        user = null;
+        clearSession();
         showAuth();
         throw new Error(data.error || 'انتهت الجلسة، سجل دخولك من جديد');
       }
@@ -1571,8 +1586,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       updateProfileUI();
     }).catch(function(e) {
       if (e.blocked) { showBlockScreen(e.blockReason || ''); return; }
-      if (e.message === 'timeout') return;
-      showAuth();
     });
   } else {
     showAuth();
@@ -1726,10 +1739,7 @@ function logout() {
   clearTimeout(logoutConfirmTimer);
   logoutConfirmTimer = null;
   unsubscribePush();
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  token = null;
-  user = null;
+  clearSession();
   document.getElementById('app').classList.remove('show');
   showAuth();
   toast(t('logout_msg'), 'info');
