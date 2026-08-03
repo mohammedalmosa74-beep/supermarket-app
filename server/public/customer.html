@@ -414,7 +414,7 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
         <div class="menu-row" onclick="toggleLang()"><i class="fas fa-globe" style="color:var(--primary);width:20px"></i><span data-trans="language">English / العربية</span><span style="font-size:12px;color:var(--text3);font-weight:400" id="lang-display">EN</span></div>
         <div class="menu-row" onclick="toggleNotifSound()"><i class="fas fa-volume-up" id="ns-icon" style="color:#8B5CF6;width:20px"></i><span>صوت الإشعارات</span><span id="ns-toggle" style="font-size:12px;color:var(--text3);font-weight:400">مفعل</span></div>
         <div class="menu-row" onclick="toggleNotifVibrate()"><i class="fas fa-mobile-alt" id="nv-icon" style="color:#EC4899;width:20px"></i><span>اهتزاز الإشعارات</span><span id="nv-toggle" style="font-size:12px;color:var(--text3);font-weight:400">مفعل</span></div>
-        <div class="menu-row" onclick="logout()"><i class="fas fa-sign-out-alt" style="color:var(--danger);width:20px"></i><span>تسجيل الخروج</span></div>
+        <div class="menu-row" id="logout-row" onclick="logout()"><i class="fas fa-sign-out-alt" style="color:var(--danger);width:20px"></i><span id="logout-label" data-trans="logout">تسجيل الخروج</span></div>
       </div>
       <div class="menu-card">
         <div style="padding:14px 16px">
@@ -909,6 +909,7 @@ var translations = {
     vibrate_on: 'الاهتزاز مفعل',
     vibrate_off: 'الاهتزاز معطل',
     confirm_logout: 'هل أنت متأكد من تسجيل الخروج؟',
+    confirm_logout_2: 'اضغط مرة أخرى للخروج من التطبيق',
     confirm_cancel_order: 'هل أنت متأكد من إلغاء هذا الطلب؟',
     order_cancelled_ok: 'تم إلغاء الطلب',
     order_reordered: 'تم إضافة منتجات الطلب إلى السلة',
@@ -1062,6 +1063,7 @@ var translations = {
     vibrate_on: 'Vibration on',
     vibrate_off: 'Vibration off',
     confirm_logout: 'Are you sure you want to logout?',
+    confirm_logout_2: 'Press again to exit the app',
     confirm_cancel_order: 'Are you sure you want to cancel this order?',
     order_cancelled_ok: 'Order cancelled',
     order_reordered: 'Order items added to cart',
@@ -1215,6 +1217,7 @@ var translations = {
     vibrate_on: 'Vibration an',
     vibrate_off: 'Vibration aus',
     confirm_logout: 'Sind Sie sicher, dass Sie sich abmelden möchten?',
+    confirm_logout_2: 'Drücken Sie erneut, um die App zu verlassen',
     confirm_cancel_order: 'Sind Sie sicher, dass Sie diese Bestellung stornieren möchten?',
     order_cancelled_ok: 'Bestellung storniert',
     order_reordered: 'Bestellartikel zum Warenkorb hinzugefügt',
@@ -1368,6 +1371,7 @@ var translations = {
     vibrate_on: 'Titreşim açık',
     vibrate_off: 'Titreşim kapalı',
     confirm_logout: 'Çıkış yapmak istediğinize emin misiniz?',
+    confirm_logout_2: 'Çıkmak için tekrar basın',
     confirm_cancel_order: 'Bu siparişi iptal etmek istediğinize emin misiniz?',
     order_cancelled_ok: 'Sipariş iptal edildi',
     order_reordered: 'Sipariş ürünleri sepete eklendi',
@@ -1691,7 +1695,23 @@ function saveCompleteProfile() {
     .catch(function(e) { toast(e.message, 'error'); });
 }
 
+var logoutConfirmTimer = null;
 function logout() {
+  var label = document.getElementById('logout-label');
+  if (!logoutConfirmTimer) {
+    if (label) label.textContent = t('confirm_logout_2');
+    var row = document.getElementById('logout-row');
+    if (row) row.style.background = 'rgba(239,68,68,.1)';
+    toast(t('confirm_logout_2'), 'info');
+    logoutConfirmTimer = setTimeout(function() {
+      logoutConfirmTimer = null;
+      if (label) label.textContent = t('logout');
+      if (row) row.style.background = '';
+    }, 3000);
+    return;
+  }
+  clearTimeout(logoutConfirmTimer);
+  logoutConfirmTimer = null;
   unsubscribePush();
   localStorage.removeItem('token');
   localStorage.removeItem('user');
@@ -1699,7 +1719,7 @@ function logout() {
   user = null;
   document.getElementById('app').classList.remove('show');
   showAuth();
-  toast('تم تسجيل الخروج', 'info');
+  toast(t('logout_msg'), 'info');
 }
 // ============ APP INIT ============
 function initApp() {
