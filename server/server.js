@@ -244,12 +244,12 @@ function adminAuth(req, res, next) {
 
 // ============ AUTH ============
 app.post('/api/auth/register', authLimiter, validate([
-  { name: 'phone', in: 'body', required: true, type: 'string', minLength: 7, maxLength: 15, message: 'رقم الهاتف مطلوب (7-15 رقم)' },
+  { name: 'phone', in: 'body', required: true, type: 'string', minLength: 10, maxLength: 10, message: 'رقم الهاتف مطلوب (10 أرقام)' },
   { name: 'password', in: 'body', required: true, type: 'string', minLength: 4, maxLength: 30, message: 'كلمة السر مطلوبة (4-30 حرف)' }
 ]), async (req, res) => {
   try {
     const { phone, name, password } = req.body;
-    if (!/^\d+$/.test(phone)) return res.status(400).json({ error: 'رقم الهاتف يجب أن يحتوي أرقام فقط' });
+    if (!/^09\d{8}$/.test(phone)) return res.status(400).json({ error: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
     if (name && typeof name === 'string' && name.length > 100) return res.status(400).json({ error: 'الاسم طويل جداً' });
     const safeName = name ? sanitize(name) : 'مستخدم';
     const existing = db.get('users').find({ phone }).value();
@@ -270,11 +270,12 @@ app.post('/api/auth/register', authLimiter, validate([
 });
 
 app.post('/api/auth/login', authLimiter, validate([
-  { name: 'phone', in: 'body', required: true, type: 'string', minLength: 7, maxLength: 15, message: 'رقم الهاتف مطلوب' },
+  { name: 'phone', in: 'body', required: true, type: 'string', minLength: 10, maxLength: 10, message: 'رقم الهاتف مطلوب (10 أرقام)' },
   { name: 'password', in: 'body', required: true, type: 'string', minLength: 1, message: 'كلمة السر مطلوبة' }
 ]), async (req, res) => {
   try {
     const { phone, password } = req.body;
+    if (!/^09\d{8}$/.test(phone)) return res.status(400).json({ error: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
     const user = db.get('users').find({ phone }).value();
     if (!user) return res.status(404).json({ error: 'هذا الرقم غير مسجل، يرجى إنشاء حساب جديد' });
     if (!user.passwordHash) return res.status(401).json({ error: 'هذا الحساب لا يملك كلمة سر، سجل حساباً جديداً برقم مختلف' });
