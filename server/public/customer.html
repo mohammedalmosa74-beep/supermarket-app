@@ -3456,7 +3456,7 @@ function markReadNotif(time) {
 const socket = io();
 function joinRoom() {
   var room = 'user:' + (user?.id || '');
-  if (token) socket.emit('join', room);
+  if (token) socket.emit('join', { room: room, token: token });
 }
 socket.on('connect', joinRoom);
 function initSocketAuth() {
