@@ -1,4 +1,4 @@
-var CACHE = 'supermarket-v7';
+var CACHE = 'supermarket-v8';
 self.addEventListener('install', function(e) {
   e.waitUntil(self.skipWaiting());
 });
@@ -30,7 +30,7 @@ self.addEventListener('push', function(e) {
   try { data = e.data ? e.data.json() : {}; } catch (err) {}
   var title = data.title || 'سوبر ماركت';
   var body = data.body || '';
-  var url = data.url || '/customer.html?v=8';
+  var url = data.url || '/customer.html?v=9';
   var options = {
     body: body,
     icon: '/uploads/icon-192.png',
@@ -42,7 +42,7 @@ self.addEventListener('push', function(e) {
 });
 self.addEventListener('notificationclick', function(e) {
   e.notification.close();
-  var url = (e.notification.data && e.notification.data.url) || '/customer.html?v=8';
+  var url = (e.notification.data && e.notification.data.url) || '/customer.html?v=9';
   e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list) {
     for (var i = 0; i < list.length; i++) {
       if (list[i].url.indexOf(url.split('?')[0]) !== -1) { return list[i].focus(); }
