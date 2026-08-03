@@ -228,12 +228,27 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
   <div class="auth-box">
     <div class="auth-logo-box"><i class="fas fa-shopping-basket"></i></div>
     <div class="auth-title">سوبر ماركت ألماني</div>
-    <div class="auth-sub">أهلاً بك! أدخل بياناتك للمتابعة</div>
-    <div class="input-box"><input type="tel" id="phone-input" placeholder="رقم الهاتف (09XXXXXXXX)" maxlength="10" inputmode="numeric"></div>
-    <div class="input-box"><i class="fas fa-user" style="color:var(--text3);font-size:14px"></i><input type="text" id="name-input" placeholder="الاسم (للتسجيل الجديد فقط)"></div>
-    <div class="input-box"><i class="fas fa-lock" style="color:var(--text3);font-size:14px"></i><input type="password" id="pass-input" placeholder="كلمة السر" maxlength="30"></div>
-    <button class="btn btn-primary" onclick="doAuth()"><i class="fas fa-arrow-left"></i> <span id="auth-btn-label">دخول</span></button>
-    <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--text2)"><span id="auth-switch-text">ليس لديك حساب؟</span> <a href="javascript:void(0)" id="auth-switch-link" style="color:var(--primary);font-weight:700" onclick="toggleAuthMode()">تسجيل جديد</a></div>
+    <div class="auth-sub" id="auth-sub">أهلاً بك! أدخل رقم هاتفك للمتابعة</div>
+
+    <div id="otp-step-phone">
+      <div class="input-box"><i class="fas fa-phone" style="color:var(--text3);font-size:14px"></i><input type="tel" id="phone-input" placeholder="رقم الهاتف (09XXXXXXXX)" maxlength="10" inputmode="numeric"></div>
+      <button class="btn btn-primary" onclick="requestOtp()"><i class="fas fa-paper-plane"></i> <span>إرسال كود التحقق</span></button>
+    </div>
+
+    <div id="otp-step-code" class="hidden">
+      <div style="text-align:center;margin:4px 0 14px;font-size:13px;color:var(--text2)">أدخل الكود المرسل إلى رقمك <b id="otp-phone-shown" style="color:var(--text);direction:ltr;display:inline-block">09XXXXXXXX</b></div>
+      <div style="background:var(--primary-bg);border:2px dashed var(--primary);border-radius:14px;padding:14px;text-align:center;margin-bottom:12px">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:4px">كود التحقق (من داخل التطبيق)</div>
+        <div id="otp-display" style="font-size:30px;font-weight:800;letter-spacing:10px;color:var(--primary);direction:ltr">••••••</div>
+      </div>
+      <div class="input-box"><i class="fas fa-key" style="color:var(--text3);font-size:14px"></i><input type="tel" id="code-input" placeholder="أدخل الكود (6 أرقام)" maxlength="6" inputmode="numeric"></div>
+      <button class="btn btn-primary" onclick="verifyOtp()"><i class="fas fa-arrow-left"></i> <span>تأكيد الدخول</span></button>
+      <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--text2)">
+        <span id="otp-timer">05:00</span>
+        <a href="javascript:void(0)" id="otp-resend" style="color:var(--primary);font-weight:700" onclick="requestOtp()">إعادة الإرسال</a>
+      </div>
+      <div style="text-align:center;margin-top:8px;font-size:12px;color:var(--text3)"><a href="javascript:void(0)" onclick="backToPhone()" style="color:var(--text2);text-decoration:underline">تغيير رقم الهاتف</a></div>
+    </div>
   </div>
 </div>
 
@@ -381,15 +396,6 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
             <input class="addr-inp" id="prof-city" placeholder="المدينة / المنطقة" style="margin:0">
             <input class="addr-inp" id="prof-addr" placeholder="العنوان بالتفصيل (الافتراضي)" style="margin:0">
             <button class="btn btn-primary btn-sm" style="margin-top:4px" onclick="saveProfile()"><i class="fas fa-save"></i> حفظ المعلومات</button>
-          </div>
-        </div>
-        <div style="padding:14px 16px;border-bottom:1px solid var(--card-border)">
-          <h4 style="font-size:14px;margin-bottom:10px"><i class="fas fa-lock" style="color:var(--danger)"></i> كلمة السر</h4>
-          <div style="display:grid;gap:8px">
-            <input class="addr-inp" type="password" id="pw-old" placeholder="كلمة السر الحالية" style="margin:0">
-            <input class="addr-inp" type="password" id="pw-new" placeholder="كلمة السر الجديدة (4 أحرف على الأقل)" style="margin:0">
-            <input class="addr-inp" type="password" id="pw-new2" placeholder="تأكيد كلمة السر الجديدة" style="margin:0">
-            <button class="btn btn-danger btn-sm" style="margin-top:4px" onclick="changeMyPassword()"><i class="fas fa-key"></i> تغيير كلمة السر</button>
           </div>
         </div>
         <div style="padding:14px 16px;border-bottom:1px solid var(--card-border)">
@@ -1589,28 +1595,76 @@ function showAuth() {
   applyTranslations();
 }
 
-var authMode = 'login';
-function toggleAuthMode() {
-  authMode = authMode === 'login' ? 'register' : 'login';
-  document.getElementById('auth-btn-label').textContent = authMode === 'login' ? 'دخول' : 'تسجيل جديد';
-  document.getElementById('auth-switch-text').textContent = authMode === 'login' ? 'ليس لديك حساب؟' : 'لديك حساب بالفعل؟';
-  document.getElementById('auth-switch-link').textContent = authMode === 'login' ? 'تسجيل جديد' : 'دخول';
-}
-function doAuth() {
+var otpTimer = null;
+var otpRemaining = 0;
+var otpCode = '';
+function requestOtp() {
   var phone = document.getElementById('phone-input').value.trim();
-  var name = document.getElementById('name-input').value.trim();
-  var pass = document.getElementById('pass-input').value;
   if (!/^09\d{8}$/.test(phone)) { toast('أدخل رقم هاتف سوري صحيح (يبدأ بـ 09 ومكوّن من 10 أرقام)', 'error'); return; }
-  if (!pass || pass.length < 4) { toast('كلمة السر مطلوبة (4 أحرف على الأقل)', 'error'); return; }
-  var body = { phone: phone, password: pass };
-  var url = '/api/auth/' + (authMode === 'login' ? 'login' : 'register');
-  if (authMode === 'register' && name) body.name = name;
-  api('POST', url, body)
+  var btn = event && event.target ? event.target.closest('button') : null;
+  if (btn) { btn.disabled = true; btn.querySelector('span').textContent = 'جارٍ الإرسال...'; }
+  api('POST', '/api/auth/otp/request', { phone: phone }, false)
     .then(function(res) {
+      otpCode = res.devCode;
+      document.getElementById('otp-display').textContent = res.devCode;
+      document.getElementById('otp-phone-shown').textContent = phone;
+      document.getElementById('otp-step-phone').classList.add('hidden');
+      document.getElementById('otp-step-code').classList.remove('hidden');
+      document.getElementById('auth-sub').textContent = 'أدخل الكود لتأكيد الدخول';
+      document.getElementById('code-input').value = '';
+      startOtpTimer(res.expiresIn || 300);
+      toast('تم إرسال كود التحقق', 'success');
+    })
+    .catch(function(e) { toast(e.message, 'error'); })
+    .finally(function() {
+      if (btn) { btn.disabled = false; btn.querySelector('span').textContent = 'إرسال كود التحقق'; }
+    });
+}
+function startOtpTimer(seconds) {
+  otpRemaining = seconds;
+  if (otpTimer) clearInterval(otpTimer);
+  var resend = document.getElementById('otp-resend');
+  resend.style.pointerEvents = 'none';
+  resend.style.opacity = '0.5';
+  document.getElementById('otp-timer').textContent = fmtTime(otpRemaining);
+  otpTimer = setInterval(function() {
+    otpRemaining--;
+    if (otpRemaining <= 0) {
+      clearInterval(otpTimer);
+      otpTimer = null;
+      document.getElementById('otp-timer').textContent = 'انتهت الصلاحية -';
+      resend.style.pointerEvents = 'auto';
+      resend.style.opacity = '1';
+      return;
+    }
+    document.getElementById('otp-timer').textContent = fmtTime(otpRemaining);
+  }, 1000);
+}
+function fmtTime(s) {
+  var m = Math.floor(s / 60), sec = s % 60;
+  return (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+}
+function backToPhone() {
+  if (otpTimer) clearInterval(otpTimer);
+  otpTimer = null;
+  document.getElementById('otp-step-code').classList.add('hidden');
+  document.getElementById('otp-step-phone').classList.remove('hidden');
+  document.getElementById('auth-sub').textContent = 'أهلاً بك! أدخل رقم هاتفك للمتابعة';
+}
+function verifyOtp() {
+  var phone = document.getElementById('phone-input').value.trim();
+  var code = document.getElementById('code-input').value.trim();
+  if (!code) code = otpCode;
+  if (!/^09\d{8}$/.test(phone)) { toast('رقم الهاتف غير صحيح', 'error'); return; }
+  if (!/^\d{6}$/.test(code)) { toast('أدخل كود التحقق المكوّن من 6 أرقام', 'error'); return; }
+  api('POST', '/api/auth/otp/verify', { phone: phone, code: code }, false)
+    .then(function(res) {
+      if (otpTimer) clearInterval(otpTimer);
+      otpTimer = null;
       saveToken(res.token);
       saveUser(res.user);
       document.getElementById('auth-view').classList.remove('show');
-      if (authMode === 'register' && (!res.user.dob || res.user.name === 'مستخدم' || res.user.name === '')) {
+      if (res.isNew || !res.user.dob || res.user.name === 'مستخدم' || res.user.name === '') {
         showCompleteProfile();
       } else {
         initApp();
@@ -3049,21 +3103,6 @@ function saveProfile() {
       saveUser(user);
       updateProfileUI();
       toast('تم حفظ المعلومات', 'success');
-    })
-    .catch(function(e) { toast(e.message, 'error'); });
-}
-
-function changeMyPassword() {
-  var oldPw = document.getElementById('pw-old').value;
-  var newPw = document.getElementById('pw-new').value;
-  var newPw2 = document.getElementById('pw-new2').value;
-  if (!oldPw) { toast('أدخل كلمة السر الحالية', 'error'); return; }
-  if (!newPw || newPw.length < 4) { toast('كلمة السر الجديدة مطلوبة (4 أحرف على الأقل)', 'error'); return; }
-  if (newPw !== newPw2) { toast('كلمتا السر الجديدتان غير متطابقتين', 'error'); return; }
-  api('PUT', '/api/auth/password', { oldPassword: oldPw, newPassword: newPw })
-    .then(function() {
-      toast('تم تغيير كلمة السر، سجل دخولك من جديد', 'success');
-      logout();
     })
     .catch(function(e) { toast(e.message, 'error'); });
 }
