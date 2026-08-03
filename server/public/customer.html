@@ -229,7 +229,7 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
     <div class="auth-logo-box"><i class="fas fa-shopping-basket"></i></div>
     <div class="auth-title">سوبر ماركت ألماني</div>
     <div class="auth-sub">أهلاً بك! أدخل بياناتك للمتابعة</div>
-    <div class="input-box"><span class="prefix">+963</span><input type="tel" id="phone-input" placeholder="رقم الهاتف" maxlength="9" inputmode="numeric"></div>
+    <div class="input-box"><input type="tel" id="phone-input" placeholder="رقم الهاتف (09XXXXXXXX)" maxlength="10" inputmode="numeric"></div>
     <div class="input-box"><i class="fas fa-user" style="color:var(--text3);font-size:14px"></i><input type="text" id="name-input" placeholder="الاسم (للتسجيل الجديد فقط)"></div>
     <div class="input-box"><i class="fas fa-lock" style="color:var(--text3);font-size:14px"></i><input type="password" id="pass-input" placeholder="كلمة السر" maxlength="30"></div>
     <button class="btn btn-primary" onclick="doAuth()"><i class="fas fa-arrow-left"></i> <span id="auth-btn-label">دخول</span></button>
@@ -556,7 +556,7 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
     </div>
     <div class="ck-section">
       <h3><i class="fas fa-phone"></i> رقم للتواصل</h3>
-      <div class="input-box" style="margin:0"><span class="prefix">+963</span><input type="tel" id="checkout-phone" placeholder="رقم هاتف إضافي (اختياري)" maxlength="9" inputmode="numeric"></div>
+      <div class="input-box" style="margin:0"><input type="tel" id="checkout-phone" placeholder="رقم هاتف إضافي (اختياري - يبدأ بـ 09)" maxlength="10" inputmode="numeric"></div>
     </div>
     <div class="ck-section">
       <h3><i class="fas fa-clock"></i> وقت التوصيل</h3>
@@ -1600,7 +1600,7 @@ function doAuth() {
   var phone = document.getElementById('phone-input').value.trim();
   var name = document.getElementById('name-input').value.trim();
   var pass = document.getElementById('pass-input').value;
-  if (!phone || phone.length < 9) { toast('أدخل رقم هاتف صحيح (9 أرقام)', 'error'); return; }
+  if (!/^09\d{8}$/.test(phone)) { toast('أدخل رقم هاتف سوري صحيح (يبدأ بـ 09 ومكوّن من 10 أرقام)', 'error'); return; }
   if (!pass || pass.length < 4) { toast('كلمة السر مطلوبة (4 أحرف على الأقل)', 'error'); return; }
   var body = { phone: phone, password: pass };
   var url = '/api/auth/' + (authMode === 'login' ? 'login' : 'register');
@@ -3011,7 +3011,7 @@ function closeImageZoom() {
 function updateProfileUI() {
   if (!user) return;
   document.getElementById('profile-name').textContent = user.name || 'مستخدم';
-  document.getElementById('profile-phone').textContent = '+963 ' + (user.phone || '');
+  document.getElementById('profile-phone').textContent = (user.phone || '');
   document.getElementById('pts-num').textContent = user.points || 0;
   document.getElementById('prof-name').value = user.name || '';
   document.getElementById('prof-city').value = user.city || '';
