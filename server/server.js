@@ -285,6 +285,54 @@ app.post('/api/auth/login', authLimiter, validate([
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ============ OTP AUTH (customer app) ============
+const otpStore = {};
+function genOtpCode() { return String(Math.floor(100000 + Math.random() * 900000)); }
+function cleanupOtps() { var now = Date.now(); for (var k in otpStore) { if (otpStore[k].expires < now) delete otpStore[k]; } }
+app.post('/api/auth/otp/request', authLimiter, validate([
+  { name: 'phone', in: 'body', required: true, type: 'string', minLength: 10, maxLength: 10, message: 'رقم الهاتف مطلوب (10 أرقام)' }
+]), (req, res) => {
+  const phone = req.body.phone;
+  if (!/^09\d{8}$/.test(phone)) return res.status(400).json({ error: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
+  cleanupOtps();
+  const code = genOtpCode();
+  otpStore[phone] = { code, expires: Date.now() + 5 * 60 * 1000, attempts: 0 };
+  // OTP is shown in the app (no SMS provider yet)
+  res.json({ success: true, devCode: code, expiresIn: 300 });
+});
+app.post('/api/auth/otp/verify', authLimiter, validate([
+  { name: 'phone', in: 'body', required: true, type: 'string', minLength: 10, maxLength: 10, message: 'رقم الهاتف مطلوب (10 أرقام)' },
+  { name: 'code', in: 'body', required: true, type: 'string', minLength: 6, maxLength: 6, message: 'الكود مطلوب (6 أرقام)' }
+]), async (req, res) => {
+  try {
+    const { phone, code } = req.body;
+    if (!/^09\d{8}$/.test(phone)) return res.status(400).json({ error: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
+    cleanupOtps();
+    var otp = otpStore[phone];
+    if (!otp) return res.status(400).json({ error: 'اطلب كوداً أولاً' });
+    if (Date.now() > otp.expires) { delete otpStore[phone]; return res.status(400).json({ error: 'انتهت صلاحية الكود، اطلب كوداً جديداً' }); }
+    if (otp.code !== code.trim()) {
+      otp.attempts++;
+      if (otp.attempts >= 5) { delete otpStore[phone]; return res.status(400).json({ error: 'محاولات كثيرة، اطلب كوداً جديداً' }); }
+      return res.status(401).json({ error: 'الكود غير صحيح' });
+    }
+    delete otpStore[phone];
+    var user = db.get('users').find({ phone }).value();
+    var isNew = false;
+    if (!user) {
+      isNew = true;
+      user = { id: Date.now().toString(36), phone, passwordHash: null, name: 'مستخدم', dob: '', city: '', address: '', points: 0, pwVer: 1, profile: {}, createdAt: new Date().toISOString() };
+      db.get('users').push(user).write();
+      var refCode = 'USR' + user.id.slice(-4);
+      if (!db.get('referrals').find({ code: refCode }).value()) {
+        db.get('referrals').push({ code: refCode, userId: user.id, name: user.name, used: false }).write();
+      }
+    }
+    const token = jwt.sign({ id: user.id, phone: user.phone, pwVer: user.pwVer || 1 }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, isNew, user: { id: user.id, phone: user.phone, name: user.name, dob: user.dob, city: user.city, points: user.points || 0 } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/auth/admin', authLimiter, validate([
   { name: 'password', in: 'body', required: true, type: 'string', minLength: 1, message: 'كلمة السر مطلوبة' }
 ]), (req, res) => {
