@@ -2616,6 +2616,7 @@ function placeOrder() {
   var minOrder = settings.minOrder || 0;
   if (minOrder > 0 && total < minOrder) { toast('الحد الأدنى للطلب ' + minOrder + ' ل.س', 'error'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> تأكيد الطلب'; } return; }
   var contactPhone = document.getElementById('checkout-phone').value.trim();
+  var floor = document.getElementById('addr-floor') ? document.getElementById('addr-floor').value.trim() : '';
   var orderNote = document.getElementById('order-note').value.trim();
   var txnId = '';
   if (selectedPay === 'syriatel') txnId = document.getElementById('txn-input').value.trim();
