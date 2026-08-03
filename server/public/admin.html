@@ -613,6 +613,10 @@ tr:hover td { background: #F9FAFB; }
         <div class="card-title"><i class="fas fa-key"></i> تغيير كلمة المرور</div>
         <div class="form-row">
           <div class="form-group">
+            <label>كلمة المرور الحالية</label>
+            <input type="password" id="current-password" placeholder="كلمة المرور الحالية">
+          </div>
+          <div class="form-group">
             <label>كلمة المرور الجديدة</label>
             <input type="password" id="new-password" placeholder="كلمة المرور الجديدة">
           </div>
@@ -1316,6 +1320,7 @@ async function showCustomerDetail(id) {
       // Action buttons
       '<div style="display:flex;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">' +
         '<button class="btn btn-sm btn-primary" onclick="closeModal();showCustomerNotes(\'' + c.id + '\',\'' + (c.adminNotes||'').replace(/'/g,"\\'") + '\',\'' + (c.adminFlag||'').replace(/'/g,"\\'") + '\')"><i class="fas fa-sticky-note"></i> ملاحظات</button>' +
+        '<button class="btn btn-sm btn-outline" onclick="closeModal();resetCustomerPassword(\'' + c.id + '\')"><i class="fas fa-key"></i> إعادة تعيين كلمة السر</button>' +
         (c.blocked ?
           '<button class="btn btn-sm btn-primary" onclick="closeModal();toggleBlockCustomer(\'' + c.id + '\',false)"><i class="fas fa-check"></i> رفع الحظر</button>' :
           '<button class="btn btn-sm btn-outline" onclick="closeModal();showBlockDialog(\'' + c.id + '\',\'' + (c.name||'').replace(/'/g,"\\'") + '\',true)"><i class="fas fa-ban"></i> حظر</button>') +
@@ -1325,6 +1330,16 @@ async function showCustomerDetail(id) {
     showModal(html);
   } catch(e) { toast('خطأ في تحميل بيانات العميل: ' + e.message, 'error'); }
 }
+function resetCustomerPassword(id) {
+  var newPw = prompt('أدخل كلمة السر الجديدة للزبون (4 أحرف على الأقل):');
+  if (!newPw) return;
+  if (newPw.length < 4) { toast('كلمة السر قصيرة جداً (4 أحرف على الأقل)', 'error'); return; }
+  if (!confirm('سيتم إلغاء جلسات الزبون الحالية وإجباره على الدخول بكلمة السر الجديدة. متابعة؟')) return;
+  api('PUT', '/api/customers/' + id + '/password', { password: newPw })
+    .then(function() { toast('تم إعادة تعيين كلمة السر', 'success'); })
+    .catch(function(e) { toast(e.message, 'error'); });
+}
+
 function showCustomerNotes(id, notes, flag) {
   var html = '<div style="padding:20px"><h3 style="font-size:16px;font-weight:700;margin-bottom:12px">ملاحظات العميل</h3>' +
     '<label style="display:block;font-size:12px;margin-bottom:4px;color:var(--text-secondary)">الملاحظات:</label>' +
@@ -2106,13 +2121,18 @@ async function saveSettings() {
 }
 
 async function changePassword() {
+  const oldPassword = document.getElementById('current-password').value.trim();
   const newPassword = document.getElementById('new-password').value.trim();
+  if (!oldPassword) { toast('الرجاء إدخال كلمة المرور الحالية', 'error'); return; }
   if (!newPassword) { toast('الرجاء إدخال كلمة المرور الجديدة', 'error'); return; }
-  if (!confirm('هل أنت متأكد من تغيير كلمة المرور؟')) return;
+  if (newPassword.length < 4) { toast('كلمة المرور الجديدة قصيرة جداً (4 أحرف على الأقل)', 'error'); return; }
+  if (!confirm('سيتم إلغاء جميع جلسات لوحة التحكم الحالية. هل أنت متأكد من تغيير كلمة المرور؟')) return;
   try {
-    await api('PUT', '/api/settings', { adminPW: newPassword });
-    toast('تم تغيير كلمة المرور', 'success');
+    await api('PUT', '/api/auth/admin-password', { oldPassword, newPassword });
+    toast('تم تغيير كلمة المرور، سجل دخولك من جديد', 'success');
+    document.getElementById('current-password').value = '';
     document.getElementById('new-password').value = '';
+    logout();
   } catch(e) { toast(e.message, 'error'); }
 }
 
