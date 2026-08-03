@@ -15,7 +15,7 @@
 [data-theme="dark"]{--primary:#22C55E;--primary-dark:#16A34A;--primary-light:#4ADE80;--primary-bg:#052E16;--accent:#FF8A50;--accent-light:#2D1A0E;--bg:#0B0F15;--card:#161B22;--card-border:#30363D;--text:#E6EDF3;--text2:#8B949E;--text3:#484F58;--danger:#F87171;--success:#4ADE80;--warn:#FBBF24;--shadow-sm:0 1px 3px rgba(0,0,0,.3);--shadow:0 2px 12px rgba(0,0,0,.4);--shadow-lg:0 8px 30px rgba(0,0,0,.5)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:16px;-webkit-tap-highlight-color:transparent}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100dvh;overflow-x:hidden;line-height:1.5}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100dvh;overflow-x:hidden;line-height:1.5;overscroll-behavior-y:contain}
 input,button,textarea,select{font-family:var(--font);outline:none;border:none;background:none;color:var(--text)}
 a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
 .hidden{display:none!important}
@@ -55,7 +55,7 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
 .search-bar{background:var(--card);border-radius:var(--radius);display:flex;align-items:center;gap:10px;padding:0 16px;box-shadow:var(--shadow-lg);border:1.5px solid transparent;transition:border-color .3s}
 .search-bar:focus-within{border-color:var(--primary)}.search-bar i{color:var(--text3);font-size:15px}
 .search-bar input{flex:1;padding:13px 0;font-size:14px;color:var(--text);background:none}.search-bar input::placeholder{color:var(--text3)}
-.app-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:24px 16px 16px;scroll-behavior:smooth}
+.app-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:24px 16px 16px;scroll-behavior:smooth;position:relative;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
 .tab-view{display:none}.tab-view.active{display:block}
 .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;margin-top:4px}
 .section-head h2{font-size:17px;font-weight:800;color:var(--text)}
@@ -1741,43 +1741,68 @@ function initApp() {
 function initScrollFeatures() {
   var content = document.getElementById('app-content');
   var nav = document.querySelector('.bottom-nav');
-  if (!content || !nav) return;
+  if (!content || content._ptrInited) return;
+  content._ptrInited = true;
   var lastScroll = 0;
   var pullStartY = 0, pulling = false, pulled = false;
   var indicator = document.getElementById('pull-indicator');
   content.addEventListener('scroll', function() {
     var st = content.scrollTop;
-    if (st > 50 && st > lastScroll + 5) nav.classList.add('nav-hidden');
-    else if (st < lastScroll - 5 || st <= 10) nav.classList.remove('nav-hidden');
+    if (st > 50 && st > lastScroll + 5) { if (nav) nav.classList.add('nav-hidden'); }
+    else if (st < lastScroll - 5 || st <= 10) { if (nav) nav.classList.remove('nav-hidden'); }
     lastScroll = st;
-  });
+  }, { passive: true });
+  function setPullUi(dy) {
+    if (!indicator) return;
+    indicator.innerHTML = dy > 80 ? '<i class="fas fa-check-circle" style="color:var(--primary)"></i> أفلت للتحديث' : '<i class="fas fa-arrow-down"></i> اسحب للتحديث';
+    if (dy > 5) content.classList.add('pull-down'); else content.classList.remove('pull-down');
+  }
+  function finishPull(y) {
+    if (!pulling) return;
+    pulling = false;
+    content.classList.remove('pull-down');
+    var dy = y - pullStartY;
+    if (dy > 80 && !pulled) {
+      pulled = true;
+      if (indicator) indicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
+      loadData();
+      setTimeout(function() {
+        pulled = false;
+        if (indicator) indicator.innerHTML = '<i class="fas fa-arrow-down"></i> اسحب للتحديث';
+      }, 2000);
+    }
+  }
   content.addEventListener('touchstart', function(e) {
-    if (content.scrollTop === 0) { pullStartY = e.touches[0].clientY; pulling = true; pulled = false; }
+    if (content.scrollTop <= 0) { pullStartY = e.touches[0].clientY; pulling = true; pulled = false; }
   }, { passive: true });
   content.addEventListener('touchmove', function(e) {
     if (!pulling || pulled) return;
     var dy = e.touches[0].clientY - pullStartY;
     if (dy > 0) {
-      content.style.transform = 'translateY(' + (dy * 0.3) + 'px)';
-      content.style.transition = 'none';
-      if (indicator) {
-        indicator.innerHTML = dy > 80 ? '<i class="fas fa-check-circle" style="color:var(--primary)"></i> أفلت للتحديث' : '<i class="fas fa-arrow-down"></i> اسحب للتحديث';
-      }
+      if (e.cancelable) e.preventDefault();
+      setPullUi(dy);
+    } else if (content.scrollTop <= 0) {
+      content.classList.remove('pull-down');
     }
-  }, { passive: true });
+  }, { passive: false });
   content.addEventListener('touchend', function(e) {
-    if (!pulling) return;
-    pulling = false;
-    content.style.transition = 'transform .3s ease';
-    content.style.transform = 'translateY(0)';
-    var dy = e.changedTouches[0].clientY - pullStartY;
-    if (dy > 80 && !pulled) {
-      pulled = true;
-      if (indicator) indicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
-      loadData();
-      setTimeout(function() { pulled = false; if (indicator) indicator.innerHTML = '<i class="fas fa-arrow-down"></i> اسحب للتحديث'; }, 2000);
-    }
+    finishPull(e.changedTouches[0].clientY);
   }, { passive: true });
+  content.addEventListener('touchcancel', function() {
+    if (pulling) { pulling = false; content.classList.remove('pull-down'); }
+  }, { passive: true });
+  content.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    if (content.scrollTop <= 0) { pullStartY = e.clientY; pulling = true; pulled = false; }
+  });
+  window.addEventListener('mousemove', function(e) {
+    if (!pulling || pulled) return;
+    var dy = e.clientY - pullStartY;
+    if (dy > 0) setPullUi(dy);
+  });
+  window.addEventListener('mouseup', function(e) {
+    finishPull(e.clientY);
+  });
 }
 
 function loadData() {
