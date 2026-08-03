@@ -10,6 +10,7 @@ const multer = require('multer');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
+app.set('trust proxy', 1);
 const server = require('http').createServer(app);
 const io = require('socket.io')(server, { cors: { origin: '*' } });
 
@@ -24,9 +25,13 @@ function sanitize(str) {
 }
 
 // Global rate limiter
-const globalLimiter = rateLimit({ windowMs: 60000, max: 100, message: { error: 'طلبات كثيرة جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false });
-const authLimiter = rateLimit({ windowMs: 60000, max: 5, message: { error: 'محاولات كثيرة جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false });
-const orderLimiter = rateLimit({ windowMs: 30000, max: 5, message: { error: 'طلبات كثيرة جداً، حاول بعد 30 ثانية' }, standardHeaders: true, legacyHeaders: false });
+function ipKey(req) { return req.ip; }
+const globalLimiter = rateLimit({ windowMs: 60000, max: 300, keyGenerator: ipKey, message: { error: 'طلبات كثيرة جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false, skip: function(req) { return req.method === 'GET' && (req.path.startsWith('/uploads/') || req.path.startsWith('/vendor/') || req.path.startsWith('/styles') || req.path.startsWith('/scripts') || req.path.startsWith('/images')); } });
+const authLimiter = rateLimit({ windowMs: 60000, max: 5, keyGenerator: function(req) { return (req.ip || '') + '|' + (req.body && req.body.phone ? req.body.phone : ''); }, message: { error: 'محاولات كثيرة جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false });
+const orderLimiter = rateLimit({ windowMs: 30000, max: 5, keyGenerator: function(req) { return (req.ip || '') + '|' + (req.user ? req.user.id : ''); }, message: { error: 'طلبات كثيرة جداً، حاول بعد 30 ثانية' }, standardHeaders: true, legacyHeaders: false });
+const adminLimiter = rateLimit({ windowMs: 60000, max: 60, keyGenerator: ipKey, message: { error: 'طلبات كثيرة جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false });
+const spamLimiter = rateLimit({ windowMs: 60000, max: 10, keyGenerator: function(req) { return (req.ip || '') + '|' + (req.user ? req.user.id : ''); }, message: { error: 'إرسال متكرر جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false });
+const pushLimiter = rateLimit({ windowMs: 60000, max: 20, keyGenerator: function(req) { return (req.ip || '') + '|' + (req.user ? req.user.id : ''); }, message: { error: 'طلبات كثيرة جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false });
 
 // Validation helpers
 function validate(fields) {
@@ -126,7 +131,7 @@ app.get('/api/push/vapid-public-key', (req, res) => {
   res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || 'BIUGaCbtDWjTe30uWuChoB85jPPcbxpipQzf3YbSCeSdP8-X9Iq6TUAlJd2KlhkgCUT2r9zVa9rLkmX6ahOisog' });
 });
 
-app.post('/api/push/subscribe', auth, (req, res) => {
+app.post('/api/push/subscribe', auth, pushLimiter, (req, res) => {
   try {
     const sub = req.body.subscription;
     if (!sub || !sub.endpoint) return res.status(400).json({ error: 'Invalid subscription' });
@@ -139,7 +144,7 @@ app.post('/api/push/subscribe', auth, (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/push/subscribe', auth, (req, res) => {
+app.delete('/api/push/subscribe', auth, pushLimiter, (req, res) => {
   try {
     db.get('pushSubs').remove(function(s) { return s.userId === req.user.id; }).write();
     res.json({ ok: true });
@@ -325,7 +330,7 @@ app.get('/api/referral/:code', (req, res) => {
   res.json({ success: true, name: ref.name, used: ref.used });
 });
 
-app.post('/api/referral/claim', auth, validate([
+app.post('/api/referral/claim', auth, spamLimiter, validate([
   { name: 'code', in: 'body', required: true, type: 'string', minLength: 4, message: 'كود الإحالة مطلوب' }
 ]), (req, res) => {
   var code = req.body.code;
@@ -345,7 +350,7 @@ app.post('/api/referral/claim', auth, validate([
 });
 
 // ============ DELIVERY ASSIGNMENT ============
-app.post('/api/orders/:id/delivery', adminAuth, validate([
+app.post('/api/orders/:id/delivery', adminAuth, adminLimiter, validate([
   { name: 'name', in: 'body', required: true, type: 'string', message: 'اسم المندوب مطلوب' }
 ]), (req, res) => {
   var order = db.get('orders').find({ id: req.params.id }).value();
@@ -363,7 +368,7 @@ app.post('/api/orders/:id/delivery', adminAuth, validate([
 });
 
 // ============ CASHIER ORDER (admin places for customer) ============
-app.post('/api/orders/cashier', adminAuth, validate([
+app.post('/api/orders/cashier', adminAuth, adminLimiter, validate([
   { name: 'customerPhone', in: 'body', required: true, type: 'string', minLength: 7 },
   { name: 'customerName', in: 'body', required: true, type: 'string', minLength: 1 },
   { name: 'address', in: 'body', required: true, type: 'string', minLength: 5 },
@@ -650,7 +655,7 @@ app.post('/api/orders', auth, orderLimiter, validate([
   res.json(order);
 });
 
-app.put('/api/orders/:id/status', adminAuth, (req, res) => {
+app.put('/api/orders/:id/status', adminAuth, adminLimiter, (req, res) => {
   const { status } = req.body;
   const order = db.get('orders').find({ id: req.params.id });
   if (!order.value()) return res.status(404).json({ error: 'Not found' });
@@ -668,7 +673,7 @@ app.put('/api/orders/:id/status', adminAuth, (req, res) => {
 });
 
 // Bulk status update
-app.put('/api/orders/bulk-status', adminAuth, (req, res) => {
+app.put('/api/orders/bulk-status', adminAuth, adminLimiter, (req, res) => {
   const { ids, status } = req.body;
   if (!ids || !ids.length) return res.status(400).json({ error: 'No IDs provided' });
   ids.forEach(function(id) {
@@ -687,18 +692,18 @@ app.put('/api/orders/bulk-status', adminAuth, (req, res) => {
   res.json({ success: true, count: ids.length });
 });
 
-app.put('/api/orders/:id/archive', adminAuth, (req, res) => {
+app.put('/api/orders/:id/archive', adminAuth, adminLimiter, (req, res) => {
   db.get('orders').find({ id: req.params.id }).assign({ archived: true }).write();
   res.json({ success: true });
 });
 
-app.put('/api/orders/:id/unarchive', adminAuth, (req, res) => {
+app.put('/api/orders/:id/unarchive', adminAuth, adminLimiter, (req, res) => {
   db.get('orders').find({ id: req.params.id }).assign({ archived: false }).write();
   res.json({ success: true });
 });
 
 // Customer cancel own pending order
-app.put('/api/orders/:id/cancel', auth, (req, res) => {
+app.put('/api/orders/:id/cancel', auth, spamLimiter, (req, res) => {
   const order = db.get('orders').find({ id: req.params.id });
   if (!order.value()) return res.status(404).json({ error: 'Not found' });
   if (order.value().userId !== req.user.id) return res.status(403).json({ error: 'لا يمكنك إلغاء هذا الطلب' });
@@ -711,7 +716,7 @@ app.put('/api/orders/:id/cancel', auth, (req, res) => {
   res.json({ success: true });
 });
 
-app.put('/api/orders/:id/note', adminAuth, (req, res) => {
+app.put('/api/orders/:id/note', adminAuth, adminLimiter, (req, res) => {
   db.get('orders').find({ id: req.params.id }).assign({ notes: req.body.notes }).write();
   res.json({ success: true });
 });
@@ -759,7 +764,7 @@ function decrementStock(order) {
   });
 }
 
-app.post('/api/points/redeem', auth, (req, res) => {
+app.post('/api/points/redeem', auth, spamLimiter, (req, res) => {
   const { amount } = req.body;
   const user = db.get('users').find({ id: req.user.id }).value();
   if (!user) return res.status(404).json({ error: 'User not found' });
@@ -803,7 +808,7 @@ app.delete('/api/coupons/:code', adminAuth, (req, res) => {
 app.get('/api/suggestions', adminAuth, (req, res) => {
   res.json(db.get('suggestions').orderBy('time', 'desc').value());
 });
-app.post('/api/suggestions', auth, validate([
+app.post('/api/suggestions', auth, spamLimiter, validate([
   { name: 'text', in: 'body', required: true, type: 'string', minLength: 1, maxLength: 1000, message: 'نص الاقتراح مطلوب' }
 ]), (req, res) => {
   const user = db.get('users').find({ id: req.user.id }).value();
@@ -821,7 +826,7 @@ app.delete('/api/suggestions/:time', adminAuth, (req, res) => {
 app.get('/api/requests', adminAuth, (req, res) => {
   res.json(db.get('productRequests').orderBy('time', 'desc').value());
 });
-app.post('/api/requests', auth, validate([
+app.post('/api/requests', auth, spamLimiter, validate([
   { name: 'name', in: 'body', required: true, type: 'string', maxLength: 200, message: 'اسم المنتج مطلوب' }
 ]), (req, res) => {
   const user = db.get('users').find({ id: req.user.id }).value();
@@ -839,7 +844,7 @@ app.delete('/api/requests/:time', adminAuth, (req, res) => {
 app.get('/api/messages', adminAuth, (req, res) => {
   res.json(db.get('adminMessages').orderBy('time', 'desc').value());
 });
-app.post('/api/messages', adminAuth, validate([
+app.post('/api/messages', adminAuth, spamLimiter, validate([
   { name: 'phone', in: 'body', required: true, type: 'string', minLength: 7, message: 'رقم الهاتف مطلوب' },
   { name: 'text', in: 'body', required: true, type: 'string', minLength: 1, maxLength: 2000, message: 'نص الرسالة مطلوب' }
 ]), (req, res) => {
@@ -954,7 +959,7 @@ app.get('/api/watch', auth, (req, res) => {
   const watched = db.get('watchedProducts').filter({ userId: req.user.id }).value();
   res.json(watched);
 });
-app.post('/api/watch', auth, (req, res) => {
+app.post('/api/watch', auth, spamLimiter, (req, res) => {
   const { productId } = req.body;
   if (!productId) return res.status(400).json({ error: 'productId مطلوب' });
   const existing = db.get('watchedProducts').find({ userId: req.user.id, productId }).value();
@@ -1106,7 +1111,7 @@ io.on('connection', (socket) => {
 });
 
 // ============ REVIEWS ============
-app.post('/api/reviews', auth, validate([
+app.post('/api/reviews', auth, spamLimiter, validate([
   { name: 'productId', in: 'body', required: true, type: 'number', message: 'معرف المنتج مطلوب' },
   { name: 'rating', in: 'body', required: true, type: 'number', min: 1, max: 5, message: 'التقييم من 1 إلى 5' },
   { name: 'comment', in: 'body', required: false, type: 'string', maxLength: 1000 }
@@ -1129,7 +1134,7 @@ app.delete('/api/reviews/:id', adminAuth, (req, res) => {
 });
 
 // ============ SUPPORT TICKETS ============
-app.post('/api/tickets', auth, validate([
+app.post('/api/tickets', auth, spamLimiter, validate([
   { name: 'subject', in: 'body', required: true, type: 'string', minLength: 3, maxLength: 200, message: 'عنوان التذكرة مطلوب' },
   { name: 'message', in: 'body', required: true, type: 'string', minLength: 5, maxLength: 2000, message: 'الرسالة مطلوبة' }
 ]), (req, res) => {
@@ -1456,7 +1461,7 @@ app.get('/api/delivery/orders', deliveryAuth, (req, res) => {
   res.json(result);
 });
 // Delivery person: update order status (delivering/delivered)
-app.put('/api/delivery/orders/:id/status', deliveryAuth, (req, res) => {
+app.put('/api/delivery/orders/:id/status', deliveryAuth, spamLimiter, (req, res) => {
   const { status, cashCollected, deliveryNote, deliveryCode } = req.body;
   if (!['delivering', 'delivered'].includes(status)) return res.status(400).json({ error: 'حالة غير صالحة' });
   var orderEnt = db.get('orders').find({ id: req.params.id });
@@ -1479,7 +1484,7 @@ app.put('/api/delivery/orders/:id/status', deliveryAuth, (req, res) => {
   res.json({ success: true });
 });
 // Delivery person: update ETA
-app.put('/api/delivery/orders/:id/eta', deliveryAuth, (req, res) => {
+app.put('/api/delivery/orders/:id/eta', deliveryAuth, spamLimiter, (req, res) => {
   var order = db.get('orders').find({ id: req.params.id });
   if (!order.value()) return res.status(404).json({ error: 'الطلب غير موجود' });
   var etaTs = typeof req.body.eta === 'string' ? new Date(req.body.eta).getTime() : Number(req.body.eta) || 0;
