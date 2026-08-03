@@ -3140,10 +3140,10 @@ async function loadSalesReport() {
 // Socket.IO
 const socket = io();
 socket.on('connect', () => {
-  if (token) socket.emit('admin-join');
+  if (token) socket.emit('admin-join', token);
 });
 function joinAdminRoom() {
-  if (token) socket.emit('admin-join');
+  if (token) socket.emit('admin-join', token);
 }
 
 // === BULK PRICE UPDATE ===
