@@ -384,6 +384,15 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
           </div>
         </div>
         <div style="padding:14px 16px;border-bottom:1px solid var(--card-border)">
+          <h4 style="font-size:14px;margin-bottom:10px"><i class="fas fa-lock" style="color:var(--danger)"></i> كلمة السر</h4>
+          <div style="display:grid;gap:8px">
+            <input class="addr-inp" type="password" id="pw-old" placeholder="كلمة السر الحالية" style="margin:0">
+            <input class="addr-inp" type="password" id="pw-new" placeholder="كلمة السر الجديدة (4 أحرف على الأقل)" style="margin:0">
+            <input class="addr-inp" type="password" id="pw-new2" placeholder="تأكيد كلمة السر الجديدة" style="margin:0">
+            <button class="btn btn-danger btn-sm" style="margin-top:4px" onclick="changeMyPassword()"><i class="fas fa-key"></i> تغيير كلمة السر</button>
+          </div>
+        </div>
+        <div style="padding:14px 16px;border-bottom:1px solid var(--card-border)">
           <h4 style="font-size:14px;margin-bottom:10px"><i class="fas fa-map-marker-alt" style="color:var(--accent)"></i> عناويني المحفوظة</h4>
           <div style="display:flex;flex-wrap:wrap;gap:4px" id="saved-addresses"></div>
           <div style="display:flex;gap:6px;margin-top:8px">
@@ -1494,6 +1503,18 @@ function api(method, path, body, authed) {
   if (authed && token) opts.headers['Authorization'] = 'Bearer ' + token;
   return fetch(path, opts).then(function(r) {
     return r.json().then(function(data) {
+      if (r.status === 401 && authed) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        token = null;
+        user = null;
+        showAuth();
+        throw new Error(data.error || 'انتهت الجلسة، سجل دخولك من جديد');
+      }
+      if (r.status === 403 && data.blockReason) {
+        showBlockScreen(data.blockReason);
+        throw new Error(data.error || 'حسابك محظور');
+      }
       if (!r.ok) { var e = new Error(data.error || 'خطأ'); if (data.blockReason) e.blockReason = data.blockReason; if (data.blocked !== undefined) e.blocked = data.blocked; throw e; }
       return data;
     });
@@ -3028,6 +3049,21 @@ function saveProfile() {
       saveUser(user);
       updateProfileUI();
       toast('تم حفظ المعلومات', 'success');
+    })
+    .catch(function(e) { toast(e.message, 'error'); });
+}
+
+function changeMyPassword() {
+  var oldPw = document.getElementById('pw-old').value;
+  var newPw = document.getElementById('pw-new').value;
+  var newPw2 = document.getElementById('pw-new2').value;
+  if (!oldPw) { toast('أدخل كلمة السر الحالية', 'error'); return; }
+  if (!newPw || newPw.length < 4) { toast('كلمة السر الجديدة مطلوبة (4 أحرف على الأقل)', 'error'); return; }
+  if (newPw !== newPw2) { toast('كلمتا السر الجديدتان غير متطابقتين', 'error'); return; }
+  api('PUT', '/api/auth/password', { oldPassword: oldPw, newPassword: newPw })
+    .then(function() {
+      toast('تم تغيير كلمة السر، سجل دخولك من جديد', 'success');
+      logout();
     })
     .catch(function(e) { toast(e.message, 'error'); });
 }
