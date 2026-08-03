@@ -213,9 +213,12 @@ function auth(req, res, next) {
   if (!token) return res.status(401).json({ error: 'No token' });
   try {
     req.user = jwt.verify(token, JWT_SECRET);
-    // Check if user is blocked
+    // Admin tokens pass through auth too
+    if (req.user.admin) return next();
+    // Check if user still exists
     var user = db.get('users').find({ id: req.user.id }).value();
-    if (user && user.blocked) return res.status(403).json({ error: 'حسابك محظور، يرجى التواصل مع الإدارة', blockReason: user.blockReason || '' });
+    if (!user) return res.status(401).json({ error: 'الحساب لم يعد موجوداً' });
+    if (user.blocked) return res.status(403).json({ error: 'حسابك محظور، يرجى التواصل مع الإدارة', blockReason: user.blockReason || '' });
     next();
   } catch {
     res.status(401).json({ error: 'Invalid token' });
@@ -725,7 +728,7 @@ app.put('/api/orders/:id/note', adminAuth, adminLimiter, (req, res) => {
 app.get('/api/orders/:id/invoice', auth, (req, res) => {
   var order = db.get('orders').find({ id: req.params.id }).value();
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  if (req.user.role !== 'admin' && order.userId !== req.user.id) return res.status(403).json({ error: 'غير مصرح' });
+  if (!req.user.admin && order.userId !== req.user.id) return res.status(403).json({ error: 'غير مصرح' });
   var products = db.get('products').value();
   var items = (order.items || []).map(function(item) {
     var prod = products.find(function(p) { return (p.id == item.id || p.id == item.productId); });
@@ -1096,13 +1099,36 @@ app.get('/api/admin/sales', adminAuth, (req, res) => {
 // ============ SOCKET.IO ============
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
-  socket.on('join', (room) => { socket.join(room); console.log(`Socket ${socket.id} joined room ${room}`); });
-  socket.on('admin-join', () => { socket.join('admin'); console.log(`Admin ${socket.id} joined admin room`); });
-  socket.on('join-delivery', (did) => { socket.join('delivery:' + did); console.log(`Delivery ${socket.id} joined room delivery:${did}`); });
+  function verifyToken(tok) {
+    if (!tok) tok = socket.handshake.auth && socket.handshake.auth.token;
+    try { return jwt.verify(tok || '', JWT_SECRET); } catch (e) { return null; }
+  }
+  socket.on('join', (data) => {
+    var room = typeof data === 'string' ? data : (data && data.room);
+    var decoded = verifyToken(typeof data === 'string' ? null : (data && data.token));
+    if (!decoded || !decoded.id || room !== 'user:' + decoded.id) return;
+    socket.join(room);
+    console.log(`Socket ${socket.id} joined room ${room}`);
+  });
+  socket.on('admin-join', (tok) => {
+    var decoded = verifyToken(tok);
+    if (!decoded || !decoded.admin) return;
+    socket.join('admin');
+    console.log(`Admin ${socket.id} joined admin room`);
+  });
+  socket.on('join-delivery', (did, tok) => {
+    if (did && typeof did === 'object') { tok = did.token; did = did.did; }
+    var decoded = verifyToken(tok);
+    if (!decoded || decoded.role !== 'delivery' || decoded.id !== did) return;
+    socket.join('delivery:' + did);
+    console.log(`Delivery ${socket.id} joined room delivery:${did}`);
+  });
   socket.on('delivery-location', (data) => {
+    var decoded = verifyToken(null);
+    if (!decoded || decoded.role !== 'delivery') return;
     if (data && data.orderId) {
       var ord = db.get('orders').find({ id: data.orderId }).value();
-      if (ord) {
+      if (ord && ord.deliveryPerson === decoded.name) {
         io.to('user:' + ord.userId).emit('delivery-location', { lat: data.lat, lng: data.lng, name: data.name, orderId: data.orderId });
       }
     }
@@ -1155,11 +1181,11 @@ app.post('/api/tickets/:id/reply', auth, validate([
 ]), (req, res) => {
   var ticket = db.get('tickets').find({ id: req.params.id });
   if (!ticket.value()) return res.status(404).json({ error: 'التذكرة غير موجودة' });
-  if (ticket.value().userId !== req.user.id && !req.admin) return res.status(403).json({ error: 'غير مصرح' });
+  if (ticket.value().userId !== req.user.id && !req.user.admin) return res.status(403).json({ error: 'غير مصرح' });
   var msgs = ticket.value().messages || [];
-  msgs.push({ from: req.admin ? 'admin' : 'user', text: req.body.text, time: Date.now() });
-  ticket.assign({ messages: msgs, status: req.admin ? 'answered' : 'open' }).write();
-  var target = req.admin ? 'user:' + ticket.value().userId : 'admin';
+  msgs.push({ from: req.user.admin ? 'admin' : 'user', text: req.body.text, time: Date.now() });
+  ticket.assign({ messages: msgs, status: req.user.admin ? 'answered' : 'open' }).write();
+  var target = req.user.admin ? 'user:' + ticket.value().userId : 'admin';
   io.to(target).emit('ticket-reply', ticket.value());
   res.json({ success: true, ticket: ticket.value() });
 });
@@ -1187,7 +1213,7 @@ app.get('/api/recurring/all', adminAuth, (req, res) => {
 app.put('/api/recurring/:id', auth, (req, res) => {
   var r = db.get('recurringOrders').find({ id: req.params.id });
   if (!r.value()) return res.status(404).json({ error: 'غير موجود' });
-  if (r.value().userId !== req.user.id && !req.admin) return res.status(403).json({ error: 'غير مصرح' });
+  if (r.value().userId !== req.user.id && !req.user.admin) return res.status(403).json({ error: 'غير مصرح' });
   if (req.body.active !== undefined) r.assign({ active: req.body.active }).write();
   if (req.body.frequency) r.assign({ frequency: req.body.frequency }).write();
   if (req.body.items) r.assign({ items: req.body.items }).write();
@@ -1466,6 +1492,7 @@ app.put('/api/delivery/orders/:id/status', deliveryAuth, spamLimiter, (req, res)
   if (!['delivering', 'delivered'].includes(status)) return res.status(400).json({ error: 'حالة غير صالحة' });
   var orderEnt = db.get('orders').find({ id: req.params.id });
   if (!orderEnt.value()) return res.status(404).json({ error: 'الطلب غير موجود' });
+  if (orderEnt.value().deliveryPerson !== req.delivery.name) return res.status(403).json({ error: 'هذا الطلب غير مسند إليك' });
   if (status === 'delivered' && orderEnt.value().deliveryCode && deliveryCode !== orderEnt.value().deliveryCode) {
     return res.status(400).json({ error: 'كود التوصيل خطأ!' });
   }
@@ -1487,6 +1514,7 @@ app.put('/api/delivery/orders/:id/status', deliveryAuth, spamLimiter, (req, res)
 app.put('/api/delivery/orders/:id/eta', deliveryAuth, spamLimiter, (req, res) => {
   var order = db.get('orders').find({ id: req.params.id });
   if (!order.value()) return res.status(404).json({ error: 'الطلب غير موجود' });
+  if (order.value().deliveryPerson !== req.delivery.name) return res.status(403).json({ error: 'هذا الطلب غير مسند إليك' });
   var etaTs = typeof req.body.eta === 'string' ? new Date(req.body.eta).getTime() : Number(req.body.eta) || 0;
   order.assign({ eta: etaTs }).write();
   io.to('user:' + order.value().userId).emit('order-status', { id: req.params.id, eta: etaTs });
