@@ -1549,24 +1549,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     settings = s;
   } catch(e) {}
   if (token && user) {
-    try {
-      var u = await Promise.race([
-        api('GET', '/api/auth/me'),
-        new Promise(function(_,rej) { setTimeout(function() { rej(new Error('timeout')); }, 5000); })
-      ]);
+    initApp();
+    api('GET', '/api/auth/me').then(function(u) {
       saveUser(u);
-      initApp();
-    } catch(e) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      token = null;
-      user = null;
-      if (e.blocked) {
-        showBlockScreen(e.blockReason || '');
-        return;
-      }
+      updateProfileUI();
+    }).catch(function(e) {
+      if (e.blocked) { showBlockScreen(e.blockReason || ''); return; }
+      if (e.message === 'timeout') return;
       showAuth();
-    }
+    });
   } else {
     showAuth();
   }
