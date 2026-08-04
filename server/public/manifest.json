@@ -23,5 +23,31 @@
       "sizes": "512x512",
       "type": "image/png"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "/uploads/screenshots/2-home.png",
+      "sizes": "824x1830",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/uploads/screenshots/3-cart.png",
+      "sizes": "824x1830",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/uploads/screenshots/4-orders.png",
+      "sizes": "824x1830",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/uploads/screenshots/5-profile.png",
+      "sizes": "824x1830",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
   ]
 }
