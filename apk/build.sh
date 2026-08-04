@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e
+SRC="$1"
+npm install -g cordova
+rm -rf /tmp/app && mkdir -p /tmp/app
+cd /tmp
+cordova create app com.almani.supermarket AlmaniSupermarket
+cd app
+cordova platform add android@13.0.0
+sed -i 's|<name>AlmaniSupermarket</name>|<name>سوبر ماركت ألماني</name>|' config.xml
+cp "$SRC/apk/index.html" www/index.html
+for d in platforms/android/app/src/main/res/mipmap-*/; do
+  cp "$SRC/server/public/uploads/icon-512.png" "$d/ic_launcher.png"
+done
+cordova build android
+echo "APK_READY at: $(pwd)/platforms/android/app/build/outputs/apk/debug/app-debug.apk"
