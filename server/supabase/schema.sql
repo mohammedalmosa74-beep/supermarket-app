@@ -18,7 +18,9 @@ create table if not exists users (
   "blockReason" text default '',
   "adminNotes" text default '',
   "adminFlag" text default '',
-  "usedReferral" boolean default false
+  "usedReferral" boolean default false,
+  "passwordHash" text default '',
+  "pwVer" integer default 1
 );
 
 -- ORDERS
@@ -36,6 +38,7 @@ create table if not exists orders (
   address text default '',
   lat numeric,
   lng numeric,
+  floor text default '',
   phone text default '',
   "orderNote" text default '',
   "customerName" text default '',
@@ -68,6 +71,7 @@ create table if not exists products (
   name text not null,
   sub text default '',
   cat text default '',
+  category text default '',
   price numeric default 0,
   unit text default '',
   image text default '',
@@ -78,6 +82,8 @@ create table if not exists products (
   active boolean default true,
   preorder boolean default false,
   cost numeric default 0,
+  description text default '',
+  tags text default '',
   "expiryDate" text default ''
 );
 
@@ -150,6 +156,7 @@ create table if not exists settings (
   "deliveryFee" numeric default 5000,
   "waNumber" text default '',
   "adminPW" text default '',
+  "adminVer" integer default 1,
   "ptsRate" numeric default 0.01,
   "ptsValue" numeric default 10,
   "minOrder" numeric default 0,
