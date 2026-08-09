@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -170,9 +170,6 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
 .pay-opt.selected .po-check{opacity:1;color:var(--primary)}
 .addr-inp{width:100%;padding:12px;background:var(--bg);border:1.5px solid var(--card-border);border-radius:var(--radius-sm);font-size:13px;color:var(--text);margin-top:6px;transition:border-color .3s}
 .addr-inp:focus{border-color:var(--primary)}
-.slot-row{display:flex;gap:8px;flex-wrap:wrap}
-.slot-opt{flex:1;min-width:70px;padding:10px 6px;border-radius:10px;text-align:center;cursor:pointer;border:2px solid var(--card-border);background:var(--card);font-size:12px;font-weight:600;color:var(--text2);transition:all .2s}
-.slot-opt.selected{border-color:var(--primary);background:var(--primary-bg);color:var(--primary)}.slot-opt small{display:block;font-size:9px;font-weight:400;color:var(--text3);margin-top:2px}
 .cpn-row{display:flex;gap:8px;margin-bottom:10px}.cpn-row input{flex:1;padding:10px 12px;background:var(--bg);border:1.5px solid var(--card-border);border-radius:10px;font-size:13px}.cpn-row button{padding:10px 16px;border-radius:10px;background:var(--primary);color:#fff;font-weight:700;font-size:12px;cursor:pointer}
 .cpn-ok{font-size:12px;color:var(--success);font-weight:700}.cpn-err{font-size:12px;color:var(--danger);font-weight:700}
 .pts-box{background:linear-gradient(135deg,#F59E0B,#F97316);border-radius:var(--radius);padding:14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;color:#fff}.pts-box .pts-num{font-size:28px;font-weight:900}.pts-box .pts-label{font-size:11px;opacity:.8}.pts-box .pts-btn{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 12px;color:#fff;font-size:11px;font-weight:700;cursor:pointer}
@@ -571,23 +568,6 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
       <div class="input-box" style="margin:0"><input type="tel" id="checkout-phone" placeholder="رقم هاتف إضافي (اختياري - يبدأ بـ 09)" maxlength="10" inputmode="numeric"></div>
     </div>
     <div class="ck-section">
-      <h3><i class="fas fa-clock"></i> وقت التوصيل</h3>
-      <div style="display:flex;gap:8px;margin-bottom:8px">
-        <input type="date" id="delivery-date" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card)">
-        <select id="delivery-date-part" style="padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card)">
-          <option value="morning">صباح (8-12)</option>
-          <option value="afternoon">ظهر (12-5)</option>
-          <option value="evening">مساء (5-10)</option>
-        </select>
-      </div>
-      <div class="slot-row" id="slot-row">
-      </div>
-    </div>
-    <div class="ck-section">
-      <h3><i class="fas fa-pen"></i> ملاحظات الطلب</h3>
-      <textarea class="txtarea-inp" id="order-note" rows="2" placeholder="ملاحظاتك للطلب (اختياري)"></textarea>
-    </div>
-    <div class="ck-section">
       <h3><i class="fas fa-gem"></i> نقاط الولاء</h3>
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:13px;color:var(--text2)" id="pts-info">رصيدك: 0 نقطة</span>
@@ -599,23 +579,6 @@ a{text-decoration:none;color:inherit}img{max-width:100%;display:block}
       <h3><i class="fas fa-tag"></i> كود خصم</h3>
       <div class="cpn-row"><input type="text" id="coupon-input" placeholder="أدخل كود الخصم"><button onclick="applyCoupon()">تطبيق</button></div>
       <div id="coupon-msg"></div>
-    </div>
-    <div class="ck-section">
-      <h3><i class="fas fa-gift" style="color:#EC4899"></i> هدية</h3>
-      <textarea class="txtarea-inp" id="gift-message" rows="2" placeholder="رسالة هدية (اختياري) - ستطبع على الفاتورة"></textarea>
-    </div>
-    <div class="ck-section">
-      <h3><i class="fas fa-sync" style="color:var(--primary)"></i> طلب دوري</h3>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-        <input type="checkbox" id="recurring-check" onchange="toggleRecurringOption()">
-        <span>كرر هذا الطلب تلقائياً</span>
-      </label>
-      <div id="recurring-options" style="display:none;margin-top:8px">
-        <select id="recurring-freq" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px">
-          <option value="weekly">أسبوعياً</option>
-          <option value="monthly">شهرياً</option>
-        </select>
-      </div>
     </div>
     <div class="ck-section">
       <h3><i class="fas fa-credit-card"></i> طريقة الدفع</h3>
@@ -812,7 +775,6 @@ var currentCat = null;
 var detailProduct = null;
 var detailQtyVal = 1;
 var selectedPay = 'cash';
-var selectedSlot = '9-12';
 var appliedCoupon = null;
 var appliedDiscount = 0;
 var usePoints = false;
@@ -2420,7 +2382,6 @@ function openCheckout() {
   if (!cart.length) { toast('السلة فارغة', 'error'); return; }
   if (!token) { toast('يجب تسجيل الدخول أولاً', 'error'); return; }
   document.getElementById('checkout-view').classList.add('show');
-  renderSlots();
   renderCheckoutItems();
   updateCheckoutSummary();
   var info = document.getElementById('pts-info');
@@ -2429,14 +2390,6 @@ function openCheckout() {
   usePoints = false;
   appliedCoupon = null;
   appliedDiscount = 0;
-  // Set default delivery date to tomorrow
-  var dateInput = document.getElementById('delivery-date');
-  if (dateInput) {
-    var tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    dateInput.value = tomorrow.toISOString().slice(0, 10);
-    dateInput.min = tomorrow.toISOString().slice(0, 10);
-  }
   if (user) {
     document.getElementById('checkout-phone').value = '';
     document.getElementById('addr-input').value = '';
@@ -2481,22 +2434,6 @@ function selectPay(el, method) {
   el.classList.add('selected');
   document.getElementById('syriatel-info').classList.toggle('hidden', method !== 'syriatel');
   document.getElementById('shamcash-info').classList.toggle('hidden', method !== 'shamcash');
-}
-
-function renderSlots() {
-  var row = document.getElementById('slot-row');
-  if (!row) return;
-  var slots = [];
-  try { slots = JSON.parse(settings.deliverySlots || '["9-12","12-3","3-6","6-9"]'); } catch(e) { slots = ['9-12','12-3','3-6','6-9']; }
-  if (!slots.length) slots = ['9-12','12-3','3-6','6-9'];
-  selectedSlot = slots[0];
-  row.innerHTML = slots.map(function(s) { return '<div class="slot-opt' + (s === slots[0] ? ' selected' : '') + '" onclick="selectSlot(this,\'' + s + '\')">' + s + '</div>'; }).join('');
-}
-function selectSlot(el, slot) {
-  selectedSlot = slot;
-  var opts = document.querySelectorAll('.slot-opt');
-  for (var i = 0; i < opts.length; i++) opts[i].classList.remove('selected');
-  el.classList.add('selected');
 }
 
 function applyCoupon() {
@@ -2623,7 +2560,6 @@ function placeOrder() {
   if (minOrder > 0 && total < minOrder) { toast('الحد الأدنى للطلب ' + minOrder + ' ل.س', 'error'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> تأكيد الطلب'; } return; }
   var contactPhone = document.getElementById('checkout-phone').value.trim();
   var floor = document.getElementById('addr-floor') ? document.getElementById('addr-floor').value.trim() : '';
-  var orderNote = document.getElementById('order-note').value.trim();
   var txnId = '';
   if (selectedPay === 'syriatel') txnId = document.getElementById('txn-input').value.trim();
   if (selectedPay === 'shamcash') txnId = document.getElementById('sham-txn-input').value.trim();
@@ -2637,9 +2573,6 @@ function placeOrder() {
   var lng = document.getElementById('order-lng').value;
   var ptsRedeem = usePoints && user ? Math.floor((user.points || 0) / 10) * (settings.ptsValue || 10) : 0;
   ptsRedeem = Math.min(ptsRedeem, Math.floor((cart.reduce(function(s, x) { return s + x.product.price * x.quantity; }, 0)) * 0.5));
-  var deliveryDate = document.getElementById('delivery-date') ? document.getElementById('delivery-date').value : '';
-  var deliveryDatePart = document.getElementById('delivery-date-part') ? document.getElementById('delivery-date-part').value : '';
-  var giftMsg = document.getElementById('gift-message') ? document.getElementById('gift-message').value.trim() : '';
   api('POST', '/api/orders', {
     items: items,
     address: address,
@@ -2648,14 +2581,10 @@ function placeOrder() {
     lng: lng ? parseFloat(lng) : null,
     payment: selectedPay,
     txnId: txnId,
-    orderNote: orderNote,
-    deliverySlot: selectedSlot,
-    deliveryDate: deliveryDate ? deliveryDate + ' ' + deliveryDatePart : '',
     contactPhone: contactPhone,
     total: total,
     deliveryFee: dfee,
-    discount: appliedDiscount || 0,
-    giftMessage: giftMsg
+    discount: appliedDiscount || 0
   })
   .then(function(order) {
     cart = [];
@@ -2666,15 +2595,6 @@ function placeOrder() {
       api('POST', '/api/points/redeem', { amount: ptsRedeem }).then(function(r) {
         if (user) user.points = r.remaining;
       }).catch(function(e) { toast('فشل خصم النقاط: ' + e.message, 'error'); });
-    }
-    // Create recurring order if checked
-    var recurringCheck = document.getElementById('recurring-check');
-    if (recurringCheck && recurringCheck.checked) {
-      var freq = document.getElementById('recurring-freq').value;
-      var nextDate = new Date();
-      if (freq === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
-      else nextDate.setMonth(nextDate.getMonth() + 1);
-      api('POST', '/api/recurring', { frequency: freq, items: items, address: address, total: total, nextDate: nextDate.toISOString() }).catch(function() {});
     }
     appliedDiscount = 0; usePoints = false;
     switchTab('orders');
@@ -2867,8 +2787,6 @@ function showOrderDetail(id) {
   html += '<div><strong>الطابق / الشقة:</strong> ' + (o.floor || '-') + '</div>';
   html += '<div><strong>جهة الاتصال:</strong> ' + (o.contactPhone || o.phone || '-') + '</div>';
   html += '<div><strong>الدفع:</strong> ' + (o.payment === 'cash' ? 'كاش' : o.payment === 'syriatel' ? 'سيريتل كاش' : o.payment === 'shamcash' ? 'شام كاش' : o.payment) + '</div>';
-  if (o.deliverySlot) html += '<div><strong>وقت التوصيل:</strong> ' + o.deliverySlot + '</div>';
-  if (o.deliveryDate) html += '<div><strong>تاريخ التوصيل:</strong> ' + o.deliveryDate + '</div>';
   if (o.deliveryPerson) html += '<div><strong>المندوب:</strong> 🚚 ' + o.deliveryPerson + (o.deliveryPersonPhone ? ' <a href="tel:' + o.deliveryPersonPhone + '" style="color:var(--primary);text-decoration:underline"><i class="fas fa-phone"></i> ' + o.deliveryPersonPhone + '</a>' : '') + '</div>';
   if (o.deliveryPerson && o.status === 'delivering' && o.deliveryCode) html += '<div style="margin-top:6px;padding:8px;background:#F0FDF4;border:2px dashed var(--primary);border-radius:8px;text-align:center;font-size:14px"><strong>كود التوصيل:</strong> <span style="font-size:22px;font-weight:800;color:var(--primary);letter-spacing:4px;direction:ltr;display:inline-block">' + o.deliveryCode + '</span><div style="font-size:11px;color:var(--text2);margin-top:4px">أعط هذا الكود للمندوب عند التوصيل</div></div>';
   if (o.deliveryPerson && o.status === 'delivering') html += '<div id="delivery-loc-' + o.id + '" style="display:none;margin-top:6px"><a href="#" target="_blank" id="delivery-map-link-' + o.id + '" style="color:var(--primary);font-weight:600;font-size:13px;background:var(--primary-bg);padding:8px 12px;border-radius:8px;display:inline-block"><i class="fas fa-map-marker-alt"></i> تتبع المندوب على الخريطة</a></div>';
@@ -3803,12 +3721,6 @@ async function loadRecurring() {
 }
 async function toggleRecurring(id, active) {
   try { await api('PUT', '/api/recurring/' + id, { active: active }); toast(active ? 'تم التفعيل' : 'تم الإلغاء', 'success'); loadRecurring(); } catch(e) { toast(e.message, 'error'); }
-}
-
-function toggleRecurringOption() {
-  var el = document.getElementById('recurring-options');
-  var check = document.getElementById('recurring-check');
-  if (el && check) el.style.display = check.checked ? 'block' : 'none';
 }
 
 // Listen for new tickets
