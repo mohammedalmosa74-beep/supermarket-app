@@ -82,6 +82,8 @@ const opQueue = [];
 let persistTimer = null;
 let refreshTimer = null;
 let refreshing = false;
+// Keys (table:pk) of rows whose ops are still pending (insert not yet confirmed)
+const pendingKeys = new Set();
 
 // ============ HELPERS ============
 function looseEq(a, b) {
@@ -162,7 +164,21 @@ async function refreshAll() {
   try {
     for (const name of Object.keys(ARRAY_TABLES)) {
       const { data } = await supabase.from(name).select('*');
-      if (data) state[name] = data;
+      if (!data) continue;
+      const cfg = ARRAY_TABLES[name];
+      if (cfg.pk) {
+        const dbKeys = new Set(data.map(r => String(r[cfg.pk])));
+        // Only re-merge rows whose ops are still pending (not yet confirmed in DB)
+        const missing = (state[name] || []).filter(r =>
+          r[cfg.pk] !== undefined && !dbKeys.has(String(r[cfg.pk])) && pendingKeys.has(name + ':' + String(r[cfg.pk]))
+        );
+        if (missing.length) {
+          queueOp(name, { type: 'insert', rows: missing });
+        }
+        state[name] = data.concat(missing);
+      } else {
+        state[name] = data;
+      }
     }
   } catch (e) { console.error('Refresh error:', e.message); }
   refreshing = false;
@@ -171,6 +187,12 @@ async function refreshAll() {
 // ============ PERSIST QUEUE ============
 function queueOp(table, op) {
   opQueue.push({ table: table, op: op });
+  const cfg = ARRAY_TABLES[table];
+  if (op.type === 'insert' && cfg && cfg.pk && op.rows) {
+    op.rows.forEach(function(r) {
+      if (r[cfg.pk] !== undefined) pendingKeys.add(table + ':' + String(r[cfg.pk]));
+    });
+  }
   schedulePersist();
 }
 
@@ -183,25 +205,67 @@ async function flushQueue() {
   persistTimer = null;
   if (!opQueue.length) return;
   const batch = opQueue.splice(0);
+  const retryOps = [];
   for (const { table, op } of batch) {
-    try {
-      await applyOp(table, op);
-    } catch (e) {
-      console.error('خطأ في الحفظ للجدول ' + table + ':', e.message);
+    let ok = false;
+    for (let attempt = 0; attempt < 5 && !ok; attempt++) {
+      try {
+        await applyOp(table, op);
+        ok = true;
+      } catch (e) {
+        if (attempt === 4) {
+          console.error('خطأ في الحفظ للجدول ' + table + ' (بعد 5 محاولات):', e.message);
+        } else {
+          await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt)));
+        }
+      }
+    }
+    if (ok) {
+      const cfg = ARRAY_TABLES[table];
+      if (op.type === 'insert' && cfg && cfg.pk && op.rows) {
+        op.rows.forEach(function(r) {
+          if (r[cfg.pk] !== undefined) pendingKeys.delete(table + ':' + String(r[cfg.pk]));
+        });
+      }
+    } else {
+      retryOps.push({ table: table, op: op });
     }
   }
+  if (retryOps.length) {
+    opQueue.unshift(...retryOps);
+    schedulePersistRetry();
+  }
+}
+
+function schedulePersistRetry() {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(flushQueue, 10000);
+}
+
+async function insertWithFallback(table, row, cfg) {
+  let current = row;
+  for (let attempt = 0; attempt < 25; attempt++) {
+    let result;
+    if (cfg.auto) {
+      result = await supabase.from(table).insert(current);
+    } else {
+      const { error } = await supabase.from(table).upsert(current, { onConflict: cfg.pk });
+      result = { error };
+    }
+    if (!result.error) return;
+    const m = /Could not find the '([^']+)' column/.exec(result.error.message);
+    if (!m) throw new Error(result.error.message);
+    const stripped = {};
+    for (const k in current) if (k !== m[1]) stripped[k] = current[k];
+    current = stripped;
+  }
+  throw new Error('تعذر الإدراج في ' + table + ': أعمدة غير معروفة');
 }
 
 async function applyOp(table, op) {
   const cfg = ARRAY_TABLES[table];
   if (op.type === 'insert') {
-    if (cfg.auto) {
-      const { error } = await supabase.from(table).insert(op.rows);
-      if (error) throw new Error(error.message);
-    } else {
-      const { error } = await supabase.from(table).upsert(op.rows, { onConflict: cfg.pk });
-      if (error) throw new Error(error.message);
-    }
+    for (const row of op.rows) await insertWithFallback(table, row, cfg);
   } else if (op.type === 'update') {
     const { error } = await supabase.from(table).update(op.updates).eq(op.pkField, op.pkValue);
     if (error) throw new Error(error.message);
