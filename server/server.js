@@ -2,7 +2,7 @@
 require('dotenv').config();
 const cors = require('cors');
 const helmet = require('helmet');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
@@ -26,10 +26,10 @@ function sanitize(str) {
 
 // Global rate limiter
 function ipKey(req) { return req.ip; }
-const globalLimiter = rateLimit({ windowMs: 60000, max: 300, keyGenerator: ipKey, message: { error: 'طلبات كثيرة جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false, skip: function(req) { return req.method === 'GET' && (req.path.startsWith('/uploads/') || req.path.startsWith('/vendor/') || req.path.startsWith('/styles') || req.path.startsWith('/scripts') || req.path.startsWith('/images')); } });
-const authLimiter = rateLimit({ windowMs: 60000, max: 5, keyGenerator: function(req) { return (req.ip || '') + '|' + (req.body && req.body.phone ? req.body.phone : ''); }, message: { error: 'محاولات كثيرة جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false });
-const orderLimiter = rateLimit({ windowMs: 30000, max: 5, keyGenerator: function(req) { return (req.ip || '') + '|' + (req.user ? req.user.id : ''); }, message: { error: 'طلبات كثيرة جداً، حاول بعد 30 ثانية' }, standardHeaders: true, legacyHeaders: false });
-const adminLimiter = rateLimit({ windowMs: 60000, max: 60, keyGenerator: ipKey, message: { error: 'طلبات كثيرة جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false });
+const globalLimiter = rateLimit({ windowMs: 60000, max: Number(process.env.RATE_GLOBAL) || 300, keyGenerator: ipKey, message: { error: 'طلبات كثيرة جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false, skip: function(req) { return req.method === 'GET' && (req.path.startsWith('/uploads/') || req.path.startsWith('/vendor/') || req.path.startsWith('/styles') || req.path.startsWith('/scripts') || req.path.startsWith('/images')); } });
+const authLimiter = rateLimit({ windowMs: 60000, max: Number(process.env.RATE_AUTH) || 5, keyGenerator: function(req) { return (req.ip || '') + '|' + (req.body && req.body.phone ? req.body.phone : ''); }, message: { error: 'محاولات كثيرة جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false });
+const orderLimiter = rateLimit({ windowMs: 30000, max: Number(process.env.RATE_ORDER) || 5, keyGenerator: function(req) { return (req.ip || '') + '|' + (req.user ? req.user.id : ''); }, message: { error: 'طلبات كثيرة جداً، حاول بعد 30 ثانية' }, standardHeaders: true, legacyHeaders: false });
+const adminLimiter = rateLimit({ windowMs: 60000, max: Number(process.env.RATE_ADMIN) || 60, keyGenerator: ipKey, message: { error: 'طلبات كثيرة جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false });
 const spamLimiter = rateLimit({ windowMs: 60000, max: 10, keyGenerator: function(req) { return (req.ip || '') + '|' + (req.user ? req.user.id : ''); }, message: { error: 'إرسال متكرر جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false });
 const pushLimiter = rateLimit({ windowMs: 60000, max: 20, keyGenerator: function(req) { return (req.ip || '') + '|' + (req.user ? req.user.id : ''); }, message: { error: 'طلبات كثيرة جداً، حاول بعد دقيقة' }, standardHeaders: true, legacyHeaders: false });
 
@@ -60,7 +60,7 @@ function validate(fields) {
 // Upload config (memory storage -> Supabase Storage)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 15 * 1024 * 1024 },
   fileFilter: function(req, file, cb) {
     var allowed = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
     if (allowed.test(path.extname(file.originalname))) cb(null, true);
@@ -169,7 +169,7 @@ const defaultProducts = [
 
 // Helper: generate order ID
 function genOrderId() {
-  return 'ORD-' + Date.now().toString(36).toUpperCase();
+  return 'ORD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
 }
 
 // ============ AUTO BACKUP ============
@@ -256,8 +256,8 @@ app.post('/api/auth/register', authLimiter, validate([
     if (existing) {
       return res.status(409).json({ error: 'هذا الرقم مسجل بالفعل، سجل دخولك بكلمة السر الخاصة بك' });
     }
-    const pwHash = bcrypt.hashSync(password, 10);
-    const user = { id: Date.now().toString(36), phone, passwordHash: pwHash, name: safeName, dob: '', city: '', address: '', points: 0, pwVer: 1, profile: {}, createdAt: new Date().toISOString() };
+    const pwHash = await bcrypt.hash(password, 10);
+    const user = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), phone, passwordHash: pwHash, name: safeName, dob: '', city: '', address: '', points: 0, pwVer: 1, profile: {}, createdAt: new Date().toISOString() };
     db.get('users').push(user).write();
     // Generate referral code for new user
     var refCode = (safeName || 'user').substring(0, 3).toUpperCase() + user.id.slice(-4);
@@ -279,7 +279,7 @@ app.post('/api/auth/login', authLimiter, validate([
     const user = db.get('users').find({ phone }).value();
     if (!user) return res.status(404).json({ error: 'هذا الرقم غير مسجل، يرجى إنشاء حساب جديد' });
     if (!user.passwordHash) return res.status(401).json({ error: 'هذا الحساب لا يملك كلمة سر، سجل حساباً جديداً برقم مختلف' });
-    if (!bcrypt.compareSync(password, user.passwordHash)) return res.status(401).json({ error: 'كلمة السر غير صحيحة' });
+    if (!await bcrypt.compare(password, user.passwordHash)) return res.status(401).json({ error: 'كلمة السر غير صحيحة' });
     const token = jwt.sign({ id: user.id, phone: user.phone, pwVer: user.pwVer || 1 }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, user: { id: user.id, phone: user.phone, name: user.name, dob: user.dob, city: user.city, points: user.points || 0 } });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -321,7 +321,7 @@ app.post('/api/auth/otp/verify', authLimiter, validate([
     var isNew = false;
     if (!user) {
       isNew = true;
-      user = { id: Date.now().toString(36), phone, passwordHash: null, name: 'مستخدم', dob: '', city: '', address: '', points: 0, pwVer: 1, profile: {}, createdAt: new Date().toISOString() };
+      user = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), phone, passwordHash: null, name: 'مستخدم', dob: '', city: '', address: '', points: 0, pwVer: 1, profile: {}, createdAt: new Date().toISOString() };
       db.get('users').push(user).write();
       var refCode = 'USR' + user.id.slice(-4);
       if (!db.get('referrals').find({ code: refCode }).value()) {
@@ -335,10 +335,10 @@ app.post('/api/auth/otp/verify', authLimiter, validate([
 
 app.post('/api/auth/admin', authLimiter, validate([
   { name: 'password', in: 'body', required: true, type: 'string', minLength: 1, message: 'كلمة السر مطلوبة' }
-]), (req, res) => {
+]), async (req, res) => {
   const { password } = req.body;
   const settings = db.get('settings').value();
-  if (bcrypt.compareSync(password, settings.adminPW)) {
+  if (await bcrypt.compare(password, settings.adminPW)) {
     const token = jwt.sign({ admin: true, pwVer: settings.adminVer || 1 }, JWT_SECRET, { expiresIn: '24h' });
     return res.json({ token });
   }
@@ -377,14 +377,14 @@ app.put('/api/auth/profile', auth, validate([
 app.put('/api/auth/password', auth, authLimiter, validate([
   { name: 'oldPassword', in: 'body', required: true, type: 'string', minLength: 1, message: 'كلمة السر الحالية مطلوبة' },
   { name: 'newPassword', in: 'body', required: true, type: 'string', minLength: 4, maxLength: 30, message: 'كلمة السر الجديدة مطلوبة (4-30 حرف)' }
-]), (req, res) => {
+]), async (req, res) => {
   try {
     var userEnt = db.get('users').find({ id: req.user.id });
     var user = userEnt.value();
     if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
     if (!user.passwordHash) return res.status(400).json({ error: 'هذا الحساب لا يملك كلمة سر' });
-    if (!bcrypt.compareSync(req.body.oldPassword, user.passwordHash)) return res.status(401).json({ error: 'كلمة السر الحالية غير صحيحة' });
-    userEnt.assign({ passwordHash: bcrypt.hashSync(req.body.newPassword, 10), pwVer: (user.pwVer || 1) + 1 }).write();
+    if (!await bcrypt.compare(req.body.oldPassword, user.passwordHash)) return res.status(401).json({ error: 'كلمة السر الحالية غير صحيحة' });
+    userEnt.assign({ passwordHash: await bcrypt.hash(req.body.newPassword, 10), pwVer: (user.pwVer || 1) + 1 }).write();
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -392,10 +392,10 @@ app.put('/api/auth/password', auth, authLimiter, validate([
 // Admin: reset a customer's password (invalidates their tokens)
 app.put('/api/customers/:id/password', adminAuth, adminLimiter, validate([
   { name: 'password', in: 'body', required: true, type: 'string', minLength: 4, maxLength: 30, message: 'كلمة السر الجديدة مطلوبة (4-30 حرف)' }
-]), (req, res) => {
+]), async (req, res) => {
   var userEnt = db.get('users').find({ id: req.params.id });
   if (!userEnt.value()) return res.status(404).json({ error: 'العميل غير موجود' });
-  userEnt.assign({ passwordHash: bcrypt.hashSync(req.body.password, 10), pwVer: (userEnt.value().pwVer || 1) + 1 }).write();
+  userEnt.assign({ passwordHash: await bcrypt.hash(req.body.password, 10), pwVer: (userEnt.value().pwVer || 1) + 1 }).write();
   db.get('adminLog').push({ action: 'password-reset', detail: 'إعادة تعيين كلمة سر زبون ' + (userEnt.value().phone || req.params.id), time: Date.now() }).write();
   res.json({ success: true });
 });
@@ -1085,13 +1085,13 @@ app.put('/api/settings', adminAuth, validate([
   { name: 'minOrder', in: 'body', required: false, type: 'number', min: 0 },
   { name: 'ptsRate', in: 'body', required: false, type: 'number', min: 0, max: 1 },
   { name: 'ptsValue', in: 'body', required: false, type: 'number', min: 1 }
-]), (req, res) => {
+]), async (req, res) => {
   const allowed = ['storeName', 'storeAddress', 'storePhone', 'storeDesc', 'storeLogo', 'storeFacebook', 'storeInstagram', 'storeTiktok', 'storeLocation', 'deliveryFee', 'waNumber', 'ptsRate', 'ptsValue', 'minFree', 'minOrder', 'deliverySlots', 'bizHours', 'adminPW', 'dealEnd', 'promo'];
   const updates = {};
   for (const k of allowed) {
     if (req.body[k] !== undefined) updates[k] = req.body[k];
   }
-  if (updates.adminPW) { updates.adminPW = bcrypt.hashSync(updates.adminPW, 10); updates.adminVer = (db.get('settings').value().adminVer || 1) + 1; }
+  if (updates.adminPW) { updates.adminPW = await bcrypt.hash(updates.adminPW, 10); updates.adminVer = (db.get('settings').value().adminVer || 1) + 1; }
   db.get('settings').assign(updates).write();
   if (req.body.dealEnd !== undefined) db.set('dealEnd', req.body.dealEnd).write();
   if (req.body.promo !== undefined) io.emit('deal-update', db.get('promo').value());
@@ -1102,10 +1102,10 @@ app.put('/api/settings', adminAuth, validate([
 app.put('/api/auth/admin-password', adminAuth, authLimiter, validate([
   { name: 'oldPassword', in: 'body', required: true, type: 'string', minLength: 1, message: 'كلمة السر الحالية مطلوبة' },
   { name: 'newPassword', in: 'body', required: true, type: 'string', minLength: 4, maxLength: 30, message: 'كلمة السر الجديدة مطلوبة (4-30 حرف)' }
-]), (req, res) => {
+]), async (req, res) => {
   var settings = db.get('settings').value();
-  if (!bcrypt.compareSync(req.body.oldPassword, settings.adminPW)) return res.status(401).json({ error: 'كلمة السر الحالية غير صحيحة' });
-  db.get('settings').assign({ adminPW: bcrypt.hashSync(req.body.newPassword, 10), adminVer: (settings.adminVer || 1) + 1 }).write();
+  if (!await bcrypt.compare(req.body.oldPassword, settings.adminPW)) return res.status(401).json({ error: 'كلمة السر الحالية غير صحيحة' });
+  db.get('settings').assign({ adminPW: await bcrypt.hash(req.body.newPassword, 10), adminVer: (settings.adminVer || 1) + 1 }).write();
   db.get('adminLog').push({ action: 'admin-password', detail: 'تغيير كلمة سر الأدمن', time: Date.now() }).write();
   res.json({ success: true });
 });
@@ -1167,6 +1167,68 @@ app.get('/api/admin/stats', adminAuth, (req, res) => {
     topCustomerPhone: topUser.phone,
     topProducts: topProducts
   });
+});
+
+// Clear data statistics (record counts per collection)
+app.get('/api/admin/clear/stats', adminAuth, (req, res) => {
+  const counts = {
+    orders: db.get('orders').value().length,
+    customers: db.get('users').value().length,
+    reviews: db.get('reviews').value().length,
+    tickets: db.get('tickets').value().length,
+    recurring: db.get('recurringOrders').value().length,
+    referrals: db.get('referrals').value().length,
+    watched: db.get('watchedProducts').value().length,
+    points: db.get('pointsHistory').value().length,
+    suggestions: db.get('suggestions').value().length,
+    messages: db.get('adminMessages').value().length,
+    productRequests: db.get('productRequests').value().length,
+    adminLog: db.get('adminLog').value().length,
+    stockLog: db.get('stockLog').value().length,
+    couponUsage: db.get('couponUsage').value().length,
+    deliveryPersons: db.get('deliveryPersons').value().length
+  };
+  res.json(counts);
+});
+
+// Clear data (orders, customers, logs, etc.)
+const CLEAR_PKS = { users:'id', orders:'id', reviews:'id', tickets:'id', recurringOrders:'id', referrals:'code', watchedProducts:'id', pointsHistory:'id', suggestions:'id', adminMessages:'id', productRequests:'id', adminLog:'id', stockLog:'id', couponUsage:'id' };
+const CLEAR_GROUPS = {
+  orders: ['orders'],
+  customers: ['users', 'referrals', 'watchedProducts', 'pointsHistory', 'tickets', 'recurringOrders', 'reviews'],
+  logs: ['adminLog', 'stockLog', 'suggestions', 'adminMessages', 'productRequests'],
+  coupons: ['couponUsage'],
+  delivery: ['deliveryPersons']
+};
+app.post('/api/admin/clear', adminAuth, validate([
+  { name: 'targets', in: 'body', required: true, message: 'حدد ما تريد مسحه' }
+]), async (req, res) => {
+  try {
+    var targets = Array.isArray(req.body.targets) ? req.body.targets : [req.body.targets];
+    var toClear = new Set();
+    if (targets.indexOf('all') !== -1) {
+      Object.keys(CLEAR_GROUPS).forEach(function(g) { CLEAR_GROUPS[g].forEach(function(t) { toClear.add(t); }); });
+    } else {
+      targets.forEach(function(t) { (CLEAR_GROUPS[t] || []).forEach(function(x) { toClear.add(x); }); });
+    }
+    if (!toClear.size) return res.status(400).json({ error: 'لم يتم تحديد أي بيانات للمسح' });
+    var total = 0;
+    for (var table of toClear) {
+      var pk = CLEAR_PKS[table];
+      if (!pk) continue;
+      var before = db.get(table).value().length;
+      try {
+        await db.supabase.from(table).delete().neq(pk, -1);
+      } catch (e) {
+        return res.status(500).json({ error: 'فشل مسح ' + table + ': ' + e.message });
+      }
+      db.set(table, []).write();
+      total += before;
+    }
+    db.get('adminLog').push({ action: 'data-clear', detail: 'مسح البيانات: ' + Array.from(toClear).join('، ') + ' (' + total + ' سجل)', time: Date.now() }).write();
+    try { io.emit('admin-data-cleared', Array.from(toClear)); } catch (e) {}
+    res.json({ success: true, cleared: Array.from(toClear), records: total });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Sales data for chart (last N days)
@@ -1236,7 +1298,7 @@ app.post('/api/reviews', auth, spamLimiter, validate([
   if (!product) return res.status(404).json({ error: 'المنتج غير موجود' });
   var existing = db.get('reviews').find({ userId: req.user.id, productId: req.body.productId }).value();
   if (existing) return res.status(400).json({ error: 'قمت بتقييم هذا المنتج مسبقاً' });
-  var review = { id: Date.now().toString(36), userId: req.user.id, userName: req.user.name || 'مستخدم', productId: req.body.productId, rating: req.body.rating, comment: req.body.comment || '', image: req.body.image || '', date: new Date().toISOString() };
+  var review = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), userId: req.user.id, userName: req.user.name || 'مستخدم', productId: req.body.productId, rating: req.body.rating, comment: req.body.comment || '', image: req.body.image || '', date: new Date().toISOString() };
   db.get('reviews').push(review).write();
   res.json({ success: true, review: review });
 });
@@ -1254,7 +1316,7 @@ app.post('/api/tickets', auth, spamLimiter, validate([
   { name: 'subject', in: 'body', required: true, type: 'string', minLength: 3, maxLength: 200, message: 'عنوان التذكرة مطلوب' },
   { name: 'message', in: 'body', required: true, type: 'string', minLength: 5, maxLength: 2000, message: 'الرسالة مطلوبة' }
 ]), (req, res) => {
-  var ticket = { id: 'TKT-' + Date.now().toString(36).toUpperCase(), userId: req.user.id, userName: req.user.name || 'مستخدم', subject: sanitize(req.body.subject), status: 'open', messages: [{ from: 'user', text: sanitize(req.body.message), time: Date.now() }], date: new Date().toISOString() };
+  var ticket = { id: 'TKT-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase(), userId: req.user.id, userName: req.user.name || 'مستخدم', subject: sanitize(req.body.subject), status: 'open', messages: [{ from: 'user', text: sanitize(req.body.message), time: Date.now() }], date: new Date().toISOString() };
   db.get('tickets').push(ticket).write();
   io.to('admin').emit('new-ticket', ticket);
   res.json({ success: true, ticket: ticket });
@@ -1290,7 +1352,7 @@ app.post('/api/recurring', auth, validate([
   { name: 'items', in: 'body', required: true },
   { name: 'address', in: 'body', required: true, type: 'string', minLength: 5 }
 ]), (req, res) => {
-  var r = { id: 'REC-' + Date.now().toString(36).toUpperCase(), userId: req.user.id, frequency: req.body.frequency, items: req.body.items || [], address: req.body.address, total: req.body.total || 0, nextDate: req.body.nextDate || '', active: true, created: new Date().toISOString() };
+  var r = { id: 'REC-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase(), userId: req.user.id, frequency: req.body.frequency, items: req.body.items || [], address: req.body.address, total: req.body.total || 0, nextDate: req.body.nextDate || '', active: true, created: new Date().toISOString() };
   db.get('recurringOrders').push(r).write();
   res.json({ success: true, recurring: r });
 });
@@ -1527,7 +1589,7 @@ app.post('/api/delivery/login', authLimiter, validate([
   try {
     const { phone, password } = req.body;
     const person = db.get('deliveryPersons').find({ phone }).value();
-    if (!person || !bcrypt.compareSync(password, person.password)) return res.status(401).json({ error: 'رقم الهاتف أو كلمة السر خطأ' });
+    if (!person || !await bcrypt.compare(password, person.password)) return res.status(401).json({ error: 'رقم الهاتف أو كلمة السر خطأ' });
     if (person.active === false) return res.status(403).json({ error: 'هذا الحساب موقوف، يرجى التواصل مع الإدارة' });
     const token = jwt.sign({ id: person.id, phone: person.phone, name: person.name, role: 'delivery', pwVer: person.pwVer || 1 }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, person: { id: person.id, name: person.name, phone: person.phone } });
@@ -1550,7 +1612,7 @@ app.post('/api/delivery/persons', adminAuth, validate([
   try {
     const { name, phone, password } = req.body;
     if (db.get('deliveryPersons').find({ phone }).value()) return res.status(400).json({ error: 'هذا الرقم مسجل مسبقاً' });
-    const person = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, phone, password: bcrypt.hashSync(password, 10), pwVer: 1, active: true, createdAt: new Date().toISOString() };
+    const person = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, phone, password: await bcrypt.hash(password, 10), pwVer: 1, active: true, createdAt: new Date().toISOString() };
     db.get('deliveryPersons').push(person).write();
     res.json({ success: true, person });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1561,7 +1623,7 @@ app.put('/api/delivery/persons/:id', adminAuth, async (req, res) => {
   const updates = {};
   if (req.body.name) updates.name = req.body.name;
   if (req.body.phone) updates.phone = req.body.phone;
-  if (req.body.password) updates.password = bcrypt.hashSync(req.body.password, 10);
+  if (req.body.password) updates.password = await bcrypt.hash(req.body.password, 10);
   if (req.body.password) updates.pwVer = (person.value().pwVer || 1) + 1;
   if (req.body.active !== undefined) updates.active = req.body.active;
   person.assign(updates).write();
