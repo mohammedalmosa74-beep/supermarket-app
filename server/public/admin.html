@@ -235,6 +235,7 @@ tr:hover td { background: #F9FAFB; }
       <a data-tab="points" onclick="switchTab('points')"><i class="fas fa-gem"></i> النقاط</a>
       <a data-tab="recurring" onclick="switchTab('recurring')"><i class="fas fa-sync"></i> الدورية</a>
       <a data-tab="delivery" onclick="switchTab('delivery');loadDeliveryPersons()"><i class="fas fa-motorcycle"></i> المندوبين</a>
+      <a data-tab="cleardata" onclick="switchTab('cleardata');loadClearStats()"><i class="fas fa-eraser"></i> مسح البيانات</a>
     </div>
     <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
   </div>
@@ -756,22 +757,53 @@ tr:hover td { background: #F9FAFB; }
     </div>
 
     <!-- Delivery Persons Management -->
-    <div id="tab-delivery" class="tab-content">
-      <div class="card">
-        <div class="card-title"><i class="fas fa-motorcycle"></i> إدارة المندوبين</div>
-        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">المندوب يدخل على <a href="/delivery" target="_blank" style="color:var(--primary)">رابط المندوب</a> ويسجل دخول بهاتفه وكلمة السر</p>
-        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          <input type="text" id="dp-name" placeholder="الاسم" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:140px">
-          <input type="tel" id="dp-phone" placeholder="رقم الهاتف" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:140px" dir="ltr">
-          <input type="text" id="dp-pw" placeholder="كلمة السر" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:120px" dir="ltr">
-          <button class="btn btn-sm btn-primary" onclick="addDeliveryPerson()"><i class="fas fa-plus"></i> إضافة</button>
+      <div id="tab-delivery" class="tab-content">
+        <div class="card">
+          <div class="card-title"><i class="fas fa-motorcycle"></i> إدارة المندوبين</div>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">المندوب يدخل على <a href="/delivery" target="_blank" style="color:var(--primary)">رابط المندوب</a> ويسجل دخول بهاتفه وكلمة السر</p>
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <input type="text" id="dp-name" placeholder="الاسم" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:140px">
+            <input type="tel" id="dp-phone" placeholder="رقم الهاتف" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:140px" dir="ltr">
+            <input type="text" id="dp-pw" placeholder="كلمة السر" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:120px" dir="ltr">
+            <button class="btn btn-sm btn-primary" onclick="addDeliveryPerson()"><i class="fas fa-plus"></i> إضافة</button>
+          </div>
+          <table>
+            <thead><tr><th>الاسم</th><th>الهاتف</th><th>الحالة</th><th>تاريخ التسجيل</th><th></th></tr></thead>
+            <tbody id="dp-table-body"></tbody>
+          </table>
         </div>
-        <table>
-          <thead><tr><th>الاسم</th><th>الهاتف</th><th>الحالة</th><th>تاريخ التسجيل</th><th></th></tr></thead>
-          <tbody id="dp-table-body"></tbody>
-        </table>
       </div>
-    </div>
+
+      <div id="tab-cleardata" class="tab-content">
+        <div class="card">
+          <div class="card-title" style="color:var(--danger)"><i class="fas fa-eraser"></i> مسح البيانات</div>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">اختر البيانات التي تريد مسحها نهائياً. هذه العملية لا يمكن التراجع عنها!</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:16px" id="clear-options">
+            <label style="display:flex;align-items:center;gap:8px;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--bg-secondary)">
+              <input type="checkbox" class="clear-chk" value="orders" checked> <span><b>الطلبات</b><br><small id="cnt-orders">...</small></span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--bg-secondary)">
+              <input type="checkbox" class="clear-chk" value="customers"> <span><b>العملاء</b><br><small id="cnt-customers">...</small></span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--bg-secondary)">
+              <input type="checkbox" class="clear-chk" value="logs"> <span><b>السجلات والاقتراحات</b><br><small id="cnt-logs">...</small></span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--bg-secondary)">
+              <input type="checkbox" class="clear-chk" value="delivery"> <span><b>المندوبون</b><br><small id="cnt-delivery">...</small></span>
+            </label>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-outline" onclick="checkAllClear(true)">تحديد الكل</button>
+            <button class="btn btn-sm btn-outline" onclick="checkAllClear(false)">إلغاء التحديد</button>
+          </div>
+          <div style="background:var(--danger-bg,#FEE2E2);border:1px solid var(--danger);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px">
+            <b style="color:var(--danger)">تأكيد المسح:</b> اكتب <b>امسح</b> ثم اضغط الزر للمسح النهائي
+            <input type="text" id="clear-confirm" placeholder="اكتب: امسح" dir="rtl" style="margin-top:8px;width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+          </div>
+          <button class="btn btn-danger" onclick="doClearData()" id="clear-btn" disabled><i class="fas fa-trash-alt"></i> مسح البيانات المحددة</button>
+        </div>
+      </div>
+
 
   <!-- Order Detail Overlay -->
   <div id="order-detail-overlay" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);padding:20px;overflow-y:auto">
@@ -881,6 +913,47 @@ function closeModal() {
 document.getElementById('modal-overlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
 
+// --- Clear data ---
+async function loadClearStats() {
+  try {
+    var s = await api('GET', '/api/admin/clear/stats');
+    var label = function(n) { return n > 0 ? n + ' سجل' : 'فارغ'; };
+    document.getElementById('cnt-orders').textContent = 'الطلبات: ' + label(s.orders);
+    document.getElementById('cnt-customers').textContent = 'العملاء: ' + label(s.customers) + ' (مع طلباتهم ونقاطهم وتذاكرهم)';
+    document.getElementById('cnt-logs').textContent = 'السجل + المخزون + الاقتراحات + الرسائل: ' + (s.adminLog + s.stockLog + s.suggestions + s.messages + s.productRequests) + ' سجل';
+    document.getElementById('cnt-delivery').textContent = 'المندوبون: ' + label(s.deliveryPersons);
+  } catch (e) { toast('خطأ في جلب الإحصائيات: ' + e.message, 'error'); }
+  var ci = document.getElementById('clear-confirm');
+  var cb = document.getElementById('clear-btn');
+  ci.value = '';
+  cb.disabled = true;
+  ci.oninput = function() { cb.disabled = ci.value.trim() !== 'امسح'; };
+}
+
+function checkAllClear(v) {
+  document.querySelectorAll('.clear-chk').forEach(function(c) { c.checked = v; });
+}
+
+async function doClearData() {
+  var targets = [];
+  document.querySelectorAll('.clear-chk:checked').forEach(function(c) { targets.push(c.value); });
+  if (!targets.length) { toast('اختر البيانات التي تريد مسحها أولاً', 'error'); return; }
+  var btn = document.getElementById('clear-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري المسح...';
+  try {
+    var r = await api('POST', '/api/admin/clear', { targets: targets });
+    toast('تم مسح ' + r.records + ' سجل: ' + r.cleared.join('، '), 'success');
+    loadClearStats();
+    loadStats();
+    loadOrders();
+  } catch (e) {
+    toast('فشل المسح: ' + e.message, 'error');
+  }
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-trash-alt"></i> مسح البيانات المحددة';
+}
+
 // --- Tab switching ---
 function switchTab(tab) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -910,6 +983,7 @@ function switchTab(tab) {
     case 'reorder': loadReorderList(); break;
     case 'points': loadPointsLog(); break;
     case 'recurring': loadRecurringAdmin(); break;
+    case 'cleardata': loadClearStats(); break;
   }
 }
 
@@ -1536,17 +1610,60 @@ function copyProductLink(id) {
 }
 
 // Image upload helper
+function compressImageFile(file, maxDim, maxBytes) {
+  return new Promise(function(resolve) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onload = function() {
+        try {
+          var w = img.width, h = img.height;
+          if (w > maxDim || h > maxDim) {
+            var scale = Math.min(maxDim / w, maxDim / h);
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
+          }
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          var push = function(q) {
+            canvas.toBlob(function(b) {
+              if (!b) return resolve(file);
+              if (b.size > maxBytes && q > 0.35) return push(q - 0.15);
+              resolve(b);
+            }, 'image/jpeg', q);
+          };
+          push(0.85);
+        } catch (err) { resolve(file); }
+      };
+      img.onerror = function() { resolve(file); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function() { resolve(file); };
+    reader.readAsDataURL(file);
+  });
+}
+
 function uploadProductImage(inputId, previewId) {
   var input = document.getElementById(inputId);
   var file = input.files[0];
   if (!file) return Promise.resolve(null);
-  var formData = new FormData();
-  formData.append('image', file);
-  return api('POST', '/api/upload', formData, true).then(function(res) {
-    var preview = document.getElementById(previewId);
-    if (preview && res.url) { preview.src = res.url; preview.style.display = 'block'; }
-    return res.url;
-  }).catch(function(e) { toast(e.message, 'error'); throw e; });
+  var doUpload = function(blob, name) {
+    var formData = new FormData();
+    formData.append('image', blob, name);
+    return api('POST', '/api/upload', formData, true).then(function(res) {
+      var preview = document.getElementById(previewId);
+      if (preview && res.url) { preview.src = res.url; preview.style.display = 'block'; }
+      return res.url;
+    }).catch(function(e) { toast(e.message, 'error'); throw e; });
+  };
+  if (file.size > 1.5 * 1024 * 1024) {
+    return compressImageFile(file, 1280, 1.5 * 1024 * 1024).then(function(blob) {
+      return doUpload(blob, file.name.replace(/\.[^.]+$/, '') + '.jpg');
+    });
+  }
+  return doUpload(file, file.name);
 }
 function previewUpload(inputId, previewId) {
   var input = document.getElementById(inputId);
