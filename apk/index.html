@@ -16,6 +16,23 @@ h2{font-size:18px;margin:0 0 14px;font-weight:700}
 <div class="icon">🛒</div>
 <h2>سوبر ماركت ألماني</h2>
 <div class="sp"></div>
-<script>location.replace('https://supermarket-app-jz0i.onrender.com/customer.html?v=9');</script>
+<script type="text/javascript">
+function goApp() { location.replace('https://supermarket-app-jz0i.onrender.com/customer.html?v=10'); }
+function initOneSignal() {
+  try {
+    var OS = window.OneSignal || (window.cordova && cordova.plugins && cordova.plugins.OneSignal);
+    if (OS) {
+      if (OS.setAppId) OS.setAppId('9439f260-2645-4dc9-97d3-9853efa1cbf9');
+      if (OS.promptForPushNotificationsWithUserResponse && typeof OS.promptForPushNotificationsWithUserResponse === 'function') {
+        OS.promptForPushNotificationsWithUserResponse(function(accepted) { goApp(); });
+        return;
+      }
+    }
+  } catch (e) {}
+  goApp();
+}
+document.addEventListener('deviceready', initOneSignal, false);
+if (window.cordova) { setTimeout(initOneSignal, 500); } else { goApp(); }
+</script>
 </body>
 </html>
