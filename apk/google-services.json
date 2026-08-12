@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "84411467348",
+    "project_id": "almani-push",
+    "storage_bucket": "almani-push.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:84411467348:android:16679a39fb30ef5bb90fc1",
+        "android_client_info": {
+          "package_name": "com.almani.supermarket"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIelaADnjjkXw3ANuz8dwEQ9Y3sBLXzmU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
