@@ -961,7 +961,8 @@ app.post('/api/onesignal/broadcast', adminAuth, (req, res) => {
   if (!appId || !apiKey) return res.status(500).json({ error: 'إعداد OneSignal غير مكتمل' });
   const payload = {
     app_id: appId,
-    included_segments: ['Total Subscriptions'],
+    included_segments: ['Subscribed Users'],
+    target_channel: 'push',
     headings: { en: title },
     contents: { en: body }
   };
