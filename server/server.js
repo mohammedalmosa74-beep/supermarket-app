@@ -952,6 +952,30 @@ app.post('/api/broadcast', adminAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// ============ ONESIGNAL NOTIFICATIONS ============
+app.post('/api/onesignal/broadcast', adminAuth, (req, res) => {
+  const { title, body } = req.body;
+  if (!title || !body) return res.status(400).json({ error: 'العنوان والنص مطلوبان' });
+  const appId = process.env.ONESIGNAL_APP_ID;
+  const apiKey = process.env.ONESIGNAL_API_KEY;
+  if (!appId || !apiKey) return res.status(500).json({ error: 'إعداد OneSignal غير مكتمل' });
+  const payload = {
+    app_id: appId,
+    included_segments: ['Total Subscriptions'],
+    headings: { en: title },
+    contents: { en: body }
+  };
+  fetch('https://api.onesignal.com/notifications', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Basic ' + apiKey },
+    body: JSON.stringify(payload)
+  }).then(r => r.json()).then(data => {
+    if (data.errors && data.errors.length) return res.status(400).json({ error: data.errors.join(' | ') });
+    db.get('adminLog').push({ action: 'onesignal', detail: 'إشعار: ' + title.slice(0, 40) + ' | id=' + data.id + ' | received=' + data.recipients, time: Date.now() }).write();
+    res.json({ success: true, received: data.recipients || 0, id: data.id });
+  }).catch(err => res.status(500).json({ error: err.message }));
+});
+
 // ============ CUSTOMERS ============
 app.get('/api/customers', adminAuth, (req, res) => {
   const customers = db.get('users').value().map(u => {
